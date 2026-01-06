@@ -1,0 +1,108 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+ENV/
+env/
+
+# Sensitive files
+*.db
+*.db-journal
+*.log
+bot_output.log
+*.json
+mady_config.json
+cocobot.db*
+
+# Card data - NEVER commit real card numbers
+cards.txt
+my_cards.txt
+test_cards*.txt
+*_cards.txt
+quick_test_cards.txt
+mixed_cards.txt
+invalid_format.txt
+small_batch.txt
+
+# Test results
+*_results*.txt
+*_results*.json
+*_output.log
+test_comprehensive_final_output.log
+test_card_filling_output.log
+test_1000_proxies_output.log
+shopify_thorough_test_output.log
+shopify_simple_thorough_output.log
+
+# Proxy files - may contain sensitive IPs
+proxies.txt
+proxy.txt
+newproxy.txt
+shopify_proxies.txt
+Webshare*.txt
+
+# Store data
+shopify_stores.txt
+shopify_stores_clean.txt
+working_shopify_stores.txt
+15000stores.txt
+all_price_stores.txt
+all_price_stores.json
+shopify_store_cache.json
+store_validation_report.json
+gates.txt
+shopify_price_gates.txt
+price_gates_test_results.json
+
+# Bot tokens and credentials
+BOT_TOKEN_*.md
+.env
+*.pem
+*.key
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.cache
+
+# AutoshBotSRC database
+AutoshBotSRC/AutoshBotSRC/*.db
+AutoshBotSRC/AutoshBotSRC/*.db.bak
+AutoshBotSRC/AutoshBotSRC/logs/
+
+# Test outputs
+shopify_multi_results_*.txt
+shopify_results_*.txt
+shopify_test_report_*.json
+test_results_*.json
