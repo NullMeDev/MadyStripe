@@ -395,3 +395,30 @@ def getCardType(card):
         return "DISCOVER"
     return "VISA"
 
+
+    @classmethod
+    def get_all_proxies(cls):
+        """Get all available proxies"""
+        return cls.proxies if cls.proxies else []
+
+    @classmethod
+    def format_proxy(cls, proxy_str):
+        """Format proxy string for aiohttp"""
+        if not proxy_str:
+            return None
+        try:
+            # Handle different proxy formats
+            if '://' in proxy_str:
+                return proxy_str
+            # Assume ip:port:user:pass format
+            parts = proxy_str.split(':')
+            if len(parts) == 4:
+                ip, port, user, password = parts
+                return f"http://{user}:{password}@{ip}:{port}"
+            elif len(parts) == 2:
+                ip, port = parts
+                return f"http://{ip}:{port}"
+            else:
+                return f"http://{proxy_str}"
+        except:
+            return None

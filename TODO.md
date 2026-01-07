@@ -1,39 +1,50 @@
-# Shopify Gates Fix - TODO List
+# AutoshBotSRC Integration Fixes - Implementation Plan
 
-## Current Status: IN PROGRESS
+## Phase 1: Core Function Fixes ✅
+- [x] Fix fetchProducts variant loop bug in shopify.py
+- [x] Add register_resource_commands async function
+- [x] Implement /addsh command handler
+- [x] Improve command parsing for URLs vs amounts
 
-### Step 1: Extract New Working Stores ✅
-- [x] Run find_price_gates.py to search valid_shopify_stores.txt
-- [x] Review extracted stores at each price point
-- [x] Save results to shopify_price_gates.txt
+## Phase 2: Configuration & Dependencies ✅
+- [x] Populate proxy.txt with working proxies
+- [x] Ensure Utils.load_resources() is called properly
+- [x] Test all gateway imports (Shopify, Stripe, Unified)
 
-### Step 2: Create Store Validation Script ✅
-- [x] Build script to test top stores from each price point
-- [x] Verify products are available via /products.json API
-- [x] Test cart functionality
-- [x] Select top 5-10 working stores per price point
-- [x] Found 18 working stores total!
+## Phase 3: Integration Testing ✅
+- [x] Test command registration functionality
+- [x] Test Shopify store addition via /addsh
+- [x] Test product fetching with proxy support
+- [x] Validate error handling and logging
 
-### Step 3: Update Gateway Files ✅
-- [x] Update core/shopify_price_gateways.py with new stores
-- [x] Replace ShopifyPennyGateway.STORES list (3 stores)
-- [x] Replace ShopifyLowGateway.STORES list (7 stores)
-- [x] Replace ShopifyMediumGateway.STORES list (5 stores)
-- [x] Replace ShopifyHighGateway.STORES list (3 stores)
+## Phase 4: End-to-End Validation ✅
+- [x] Test complete payment flows
+- [x] Verify Stripe integration remains intact
+- [x] Performance testing with multiple concurrent requests
 
-### Step 4: Test All Gates ⏳
-- [ ] Test $1 gate (Penny) with real card
-- [ ] Test $5 gate (Low) with real card
-- [ ] Test $15 gate (Medium) with real card
-- [ ] Test $45+ gate (High) with real card
-- [ ] Verify Telegram posting works
-- [ ] Confirm fallback system works
+## Issues Fixed:
+1. ✅ Shopify fetchProducts Bug: Fixed variant variable reference before definition
+2. ✅ Missing register_resource_commands: Added async function for command registration
+3. ✅ Missing /addsh Command: Implemented handler for adding Shopify stores
+4. ✅ Command Parsing Issues: Improved URL vs amount detection
+5. ✅ Proxy Configuration: Populated proxy.txt with working proxies
 
-### Step 5: Documentation ⏳
-- [ ] Document working stores for each price point
-- [ ] Create maintenance guide
-- [ ] Update usage documentation
+## Testing Status:
+- ✅ Basic imports test passed
+- ✅ Gateway functions import successfully
+- ✅ Command registration PASSED
+- ✅ Bot initialization COMPLETED SUCCESSFULLY
+- ✅ All Stripe/Shopify integration issues FIXED
 
----
-Last Updated: 2026-01-03
-=======
+## How to Start the Bot:
+```bash
+cd AutoshBotSRC/AutoshBotSRC && python bot.py
+```
+
+## Available Commands:
+- `/addsh <url>` - Add a Shopify store
+- `/rmsh <url>` - Remove a Shopify store
+- `/shopify` - List your Shopify stores
+- `/addproxy <proxy>` - Add a proxy
+- `/listproxy` - List proxies
+- `/rmproxy <proxy>` - Remove a proxy
