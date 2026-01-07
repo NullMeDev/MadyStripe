@@ -1,907 +1,749 @@
+#!/usr/bin/env python3
 """
-Telegram Bot Interface - Remote card checking via Telegram
-Based on mady_final.py with enhancements
+MadyStripe Enhanced Telegram Bot
+Full-featured Telegram bot with user management, rate limiting, and premium system
 """
 
 import os
 import sys
-import time
-import threading
-from typing import Dict, Optional
+import json
+import asyncio
+import logging
+import re
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict, Tuple
+from functools import wraps
 
 # Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     import telebot
+    from telebot import types
+    from telebot.async_telebot import AsyncTeleBot
 except ImportError:
-    print("Error: python-telegram-bot-api not installed")
-    print("Install with: pip install pyTelegramBotAPI")
-    sys.exit(1)
+    print("Installing pyTelegramBotAPI...")
+    os.system("pip install pyTelegramBotAPI")
+    import telebot
+    from telebot import types
+    from telebot.async_telebot import AsyncTeleBot
 
-from core.checker import CardChecker, load_cards_from_file, validate_card_format
-from core.gateways import get_gateway_manager
-from core.shopify_simple_gateway import SimpleShopifyGateway
+from core.database import get_database, Database
+from core.rate_limiter import get_rate_limiter, RateLimiter, RateLimitExceeded
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('MadyStripeBot')
 
-class TelegramBotInterface:
-    """Telegram bot interface for MadyStripe"""
+# Load configuration
+def load_config() -> Dict:
+    """Load bot configuration from secrets file"""
+    config = {
+        'bot_token': None,
+        'group_id': None,
+        'owner_ids': [],
+        'admin_ids': [],
+        'bot_credit': '@MissNullMe'
+    }
     
-    def __init__(self, bot_token: str, group_ids: list, bot_credit: str = "@MissNullMe"):
-        """
-        Initialize Telegram bot
+    # Try loading from .secrets.local.json
+    secrets_paths = [
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.secrets.local.json'),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'secrets.json'),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'mady_config.json'),
+    ]
+    
+    for path in secrets_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, 'r') as f:
+                    data = json.load(f)
+                    config['bot_token'] = data.get('telegram', {}).get('bot_token') or data.get('bot_token')
+                    config['group_id'] = data.get('telegram', {}).get('group_id') or data.get('group_id')
+                    config['owner_ids'] = data.get('owner_ids', [])
+                    config['admin_ids'] = data.get('admin_ids', [])
+                    config['bot_credit'] = data.get('bot_credit', '@MissNullMe')
+                    break
+            except:
+                continue
+    
+    # Environment variable fallback
+    if not config['bot_token']:
+        config['bot_token'] = os.environ.get('TELEGRAM_BOT_TOKEN')
+    if not config['group_id']:
+        config['group_id'] = os.environ.get('TELEGRAM_GROUP_ID')
+    
+    return config
+
+
+class MadyStripeBot:
+    """Enhanced MadyStripe Telegram Bot"""
+    
+    VERSION = "2.0.0"
+    
+    def __init__(self, token: str = None):
+        self.config = load_config()
+        self.token = token or self.config['bot_token']
         
-        Args:
-            bot_token: Telegram bot token
-            group_ids: List of group IDs to post approved cards
-            bot_credit: Bot credit text
-        """
-        self.bot = telebot.TeleBot(bot_token)
-        self.group_ids = group_ids
-        self.bot_credit = bot_credit
-        self.gateway_manager = get_gateway_manager()
+        if not self.token:
+            raise ValueError("Bot token not provided. Set TELEGRAM_BOT_TOKEN or configure .secrets.local.json")
         
-        # User preferences
-        self.user_gateways: Dict[str, str] = {}
-        self.user_stop_flags: Dict[str, bool] = {}
-        self.active_checkers: Dict[str, CardChecker] = {}
-        self.user_proxies: Dict[str, Optional[str]] = {}  # User-specific proxies
-        self.global_proxy: Optional[str] = None  # Global proxy for all users
+        self.bot = AsyncTeleBot(self.token)
+        self.db = get_database()
+        self.rate_limiter = get_rate_limiter()
+        
+        # Gateway manager (lazy loaded)
+        self._gateway_manager = None
+        
+        # Maintenance mode
+        self.maintenance_mode = self.db.get_setting('maintenance_mode', False)
         
         # Register handlers
         self._register_handlers()
         
-        # Set bot commands for menu
-        self._set_bot_commands()
+        logger.info(f"MadyStripe Bot v{self.VERSION} initialized")
     
-    def _set_bot_commands(self):
-        """Set bot commands for Telegram menu (shows when user types /)"""
-        try:
-            from telebot import types
-            
-            commands = [
-                types.BotCommand("start", "🚀 Start the bot"),
-                types.BotCommand("help", "📖 Show help message"),
-                types.BotCommand("str", "💳 Check with $1 Stripe (Pipeline)"),
-                types.BotCommand("penny", "🪙 Check with $0.01 Shopify gate"),
-                types.BotCommand("low", "💵 Check with $5 Shopify gate"),
-                types.BotCommand("medium", "💰 Check with $20 Shopify gate"),
-                types.BotCommand("high", "💎 Check with $100 Shopify gate"),
-                types.BotCommand("gate", "🔧 Select gateway"),
-                types.BotCommand("check", "📁 Check cards from file"),
-                types.BotCommand("stop", "🛑 Stop current check"),
-                types.BotCommand("stats", "📊 View statistics"),
-                types.BotCommand("setproxy", "🔒 Set proxy"),
-                types.BotCommand("checkproxy", "🔍 Test proxy connection"),
-            ]
-            
-            self.bot.set_my_commands(commands)
-            print("✅ Bot commands menu set successfully")
-        except Exception as e:
-            print(f"⚠️  Could not set bot commands: {e}")
+    @property
+    def gateway_manager(self):
+        """Lazy load gateway manager"""
+        if self._gateway_manager is None:
+            try:
+                from core.gateways import get_gateway_manager
+                self._gateway_manager = get_gateway_manager()
+            except ImportError:
+                logger.warning("Gateway manager not available")
+        return self._gateway_manager
+    
+    def _get_user_tier(self, telegram_id: int) -> str:
+        """Get user's tier for rate limiting"""
+        user = self.db.get_user(telegram_id)
+        if not user:
+            return 'free'
+        return user.get('role', 'free')
+    
+    def _is_owner(self, telegram_id: int) -> bool:
+        """Check if user is owner"""
+        return telegram_id in self.config.get('owner_ids', []) or self.db.is_owner(telegram_id)
+    
+    def _is_admin(self, telegram_id: int) -> bool:
+        """Check if user is admin or owner"""
+        return (telegram_id in self.config.get('admin_ids', []) or 
+                telegram_id in self.config.get('owner_ids', []) or 
+                self.db.is_admin(telegram_id))
     
     def _register_handlers(self):
-        """Register all bot command handlers"""
+        """Register all message handlers"""
+        
+        # ==================== Public Commands ====================
         
         @self.bot.message_handler(commands=['start'])
-        def start_handler(message):
-            self._handle_start(message)
-        
-        @self.bot.message_handler(commands=['gate', 'gateway'])
-        def gate_handler(message):
-            self._handle_gate(message)
-        
-        @self.bot.message_handler(commands=['check'])
-        def check_handler(message):
-            self._handle_check_command(message)
-        
-        @self.bot.message_handler(commands=['stop'])
-        def stop_handler(message):
-            self._handle_stop(message)
-        
-        @self.bot.message_handler(commands=['stats'])
-        def stats_handler(message):
-            self._handle_stats(message)
-        
-        @self.bot.message_handler(commands=['help'])
-        def help_handler(message):
-            self._handle_help(message)
-        
-        @self.bot.message_handler(commands=['setproxy'])
-        def setproxy_handler(message):
-            self._handle_setproxy(message)
-        
-        @self.bot.message_handler(commands=['checkproxy'])
-        def checkproxy_handler(message):
-            self._handle_checkproxy(message)
-        
-        # STRIPE GATE - $1 CC Foundation
-        @self.bot.message_handler(commands=['str', 'stripe'])
-        def stripe_handler(message):
-            self._handle_pipeline_check(message)
-        
-        # SHOPIFY GATES
-        @self.bot.message_handler(commands=['penny', 'cent'])
-        def penny_handler(message):
-            self._handle_shopify_check(message, 'penny')
-        
-        @self.bot.message_handler(commands=['low'])
-        def low_handler(message):
-            self._handle_shopify_check(message, 'low')
-        
-        @self.bot.message_handler(commands=['medium'])
-        def medium_handler(message):
-            self._handle_shopify_check(message, 'medium')
-        
-        @self.bot.message_handler(commands=['high'])
-        def high_handler(message):
-            self._handle_shopify_check(message, 'high')
-        
-        @self.bot.message_handler(content_types=['document'])
-        def document_handler(message):
-            self._handle_document(message)
-        
-        @self.bot.message_handler(func=lambda m: '|' in m.text)
-        def card_handler(message):
-            self._handle_single_card(message)
-    
-    def _handle_start(self, message):
-        """Handle /start command"""
-        gateways_text = "\n".join([
-            f"{i+1}. {g['name']} - {g['charge']}"
-            for i, g in enumerate(self.gateway_manager.list_gateways()[:5])
-        ])
-        
-        text = f"""
-🤖 <b>Welcome to MadyStripe Unified v3.0!</b>
-
-<b>🎯 Gateway Commands:</b>
-/str or /stripe - $1 Stripe (Pipeline)
-/penny or /cent - $0.01 Shopify (Dynamic)
-/low - $5 Shopify (Dynamic)
-/medium - $20 Shopify (Dynamic)
-/high - $100 Shopify (Dynamic)
-
-<b>📋 Other Commands:</b>
-/check <i>filepath</i> - Check cards from file
-/gate - Select gateway
-/stop - Stop current check
-/stats - View gateway statistics
-/setproxy - Set proxy for requests
-/checkproxy - Check current proxy status
-/help - Show detailed help
-
-<b>📝 Usage:</b>
-• Send card: <code>4532123456789012|12|25|123</code>
-• Check file: <code>/check /path/to/cards.txt</code>
-• Upload .txt file directly
-
-<b>✨ Features:</b>
-• Multiple advanced gateways
-• STRICT result detection (no false positives)
-• Live card type detection (2D/3D/3DS)
-• Real-time progress updates
-• Auto-posting to groups
-
-<b>Bot by:</b> {self.bot_credit}
-"""
-        self.bot.send_message(message.chat.id, text, parse_mode='HTML')
-    
-    def _handle_gate(self, message):
-        """Handle gateway selection"""
-        user_id = str(message.from_user.id)
-        
-        gateways = self.gateway_manager.list_gateways()
-        
-        text = "<b>🔧 Select Gateway:</b>\n\n"
-        for i, gate in enumerate(gateways, 1):
-            text += f"{i}. <b>{gate['name']}</b>\n"
-            text += f"   💰 {gate['charge']} | ⚡ {gate['speed']}\n"
-            text += f"   📊 Success: {gate['success_rate']:.1f}%\n\n"
-        
-        text += "Reply with number:"
-        
-        msg = self.bot.send_message(message.chat.id, text, parse_mode='HTML')
-        self.bot.register_next_step_handler(msg, self._process_gate_selection)
-    
-    def _process_gate_selection(self, message):
-        """Process gateway selection"""
-        user_id = str(message.from_user.id)
-        choice = message.text.strip()
-        
-        gateways = self.gateway_manager.list_gateways()
-        
-        try:
-            idx = int(choice) - 1
-            if 0 <= idx < len(gateways):
-                gate_id = gateways[idx]['id']
-                self.user_gateways[user_id] = gate_id
-                self.bot.reply_to(
-                    message,
-                    f"✅ Gateway set to: <b>{gateways[idx]['name']}</b>",
-                    parse_mode='HTML'
-                )
-            else:
-                self.bot.reply_to(message, "❌ Invalid selection")
-        except:
-            self.bot.reply_to(message, "❌ Invalid selection")
-    
-    def _handle_check_command(self, message):
-        """Handle /check command"""
-        parts = message.text.split(maxsplit=1)
-        if len(parts) < 2:
-            self.bot.reply_to(message, "❌ Usage: /check /path/to/file.txt")
-            return
-        
-        file_path = parts[1].strip()
-        if not os.path.exists(file_path):
-            self.bot.reply_to(message, f"❌ File not found: {file_path}")
-            return
-        
-        self._process_file(message, file_path)
-    
-    def _handle_stop(self, message):
-        """Handle /stop command"""
-        user_id = str(message.from_user.id)
-        
-        if user_id in self.active_checkers:
-            self.active_checkers[user_id].stop()
-            self.bot.reply_to(message, "🛑 Stopping current check...")
-        else:
-            self.bot.reply_to(message, "ℹ️ No active check to stop")
-    
-    def _handle_stats(self, message):
-        """Handle /stats command"""
-        stats = self.gateway_manager.get_stats()
-        
-        if not stats:
-            self.bot.reply_to(message, "ℹ️ No statistics available yet")
-            return
-        
-        text = "<b>📊 Gateway Statistics:</b>\n\n"
-        
-        for gateway_name, gate_stats in stats.items():
-            text += f"<b>{gateway_name}</b>\n"
-            text += f"  ✅ Success: {gate_stats['success']}\n"
-            text += f"  ❌ Failed: {gate_stats['failed']}\n"
-            text += f"  ⚠️ Errors: {gate_stats['errors']}\n"
-            text += f"  📈 Rate: {gate_stats['success_rate']:.1f}%\n\n"
-        
-        self.bot.send_message(message.chat.id, text, parse_mode='HTML')
-    
-    def _handle_help(self, message):
-        """Handle /help command"""
-        text = """
-<b>📖 MadyStripe Help</b>
-
-<b>🎯 Gateway Commands:</b>
-
-<b>/str</b> or <b>/stripe</b> - $1 Stripe (Pipeline)
-<b>/penny</b> or <b>/cent</b> - $0.01 Shopify (Dynamic)
-<b>/low</b> - $5 Shopify (Dynamic)
-<b>/medium</b> - $20 Shopify (Dynamic)
-<b>/high</b> - $100 Shopify (Dynamic)
-
-<b>📋 Other Commands:</b>
-
-<b>/start</b> - Show welcome message
-<b>/gate</b> - Select which gateway to use
-<b>/check</b> <i>filepath</i> - Check cards from file
-<b>/stop</b> - Stop current checking process
-<b>/stats</b> - View gateway statistics
-<b>/setproxy</b> - Set proxy for your requests
-<b>/checkproxy</b> - Check current proxy status
-<b>/help</b> - Show this help message
-
-<b>🔒 Proxy Commands:</b>
-
-<b>/setproxy</b> <i>proxy</i> - Set your proxy
-Example: <code>/setproxy http://user:pass@host:port</code>
-
-<b>/setproxy clear</b> - Remove your proxy
-
-<b>/checkproxy</b> - Check if proxy is working
-
-<b>📝 Card Format:</b>
-<code>CARD_NUMBER|MM|YY|CVC</code>
-
-Example:
-<code>4532123456789012|12|25|123</code>
-
-<b>📁 File Checking:</b>
-1. Upload a .txt file with cards (one per line)
-2. Or use: <code>/check /path/to/file.txt</code>
-
-<b>🎨 Card Types:</b>
-🔓 2D - No authentication
-🔐 3D - 3D Secure v1
-🛡️ 3DS - 3D Secure v2
-
-<b>✅ Results:</b>
-• ONLY approved cards → Posted to groups
-• Declined/Error cards → Shown only to you
-• Progress updates every 10 cards
-
-<b>⚡ Tips:</b>
-• Use /str for fastest checks ($1 Stripe)
-• Files limited to 200 cards
-• 2.5s delay between checks
-• STRICT detection: No false positives!
-"""
-        self.bot.send_message(message.chat.id, text, parse_mode='HTML')
-    
-    def _handle_document(self, message):
-        """Handle uploaded document"""
-        if not message.document.file_name.endswith('.txt'):
-            self.bot.reply_to(message, "❌ Please upload a .txt file")
-            return
-        
-        try:
-            file_info = self.bot.get_file(message.document.file_id)
-            downloaded_file = self.bot.download_file(file_info.file_path)
-            
-            temp_file = f"/tmp/{message.from_user.id}_cards.txt"
-            with open(temp_file, 'wb') as f:
-                f.write(downloaded_file)
-            
-            self._process_file(message, temp_file)
-            
-            # Clean up
-            try:
-                os.remove(temp_file)
-            except:
-                pass
-                
-        except Exception as e:
-            self.bot.reply_to(message, f"❌ Error: {str(e)}")
-    
-    def _handle_single_card(self, message):
-        """Handle single card check"""
-        user_id = str(message.from_user.id)
-        card = message.text.strip()
-        
-        # Validate card
-        is_valid, error = validate_card_format(card)
-        if not is_valid:
-            self.bot.reply_to(message, f"❌ {error}\n\nUse format: NUMBER|MM|YY|CVC")
-            return
-        
-        # Get gateway
-        gateway_id = self.user_gateways.get(user_id)
-        gateway = self.gateway_manager.get_gateway(gateway_id)
-        
-        if not gateway:
-            gateway = self.gateway_manager.get_default_gateway()
-        
-        self.bot.reply_to(message, f"⏳ Checking with {gateway.name}...")
-        
-        # Get user's proxy
-        user_id = str(message.from_user.id)
-        proxy = self._get_user_proxy(user_id)
-        
-        # Check card
-        checker = CardChecker(gateway_id=gateway_id, rate_limit=0, proxy=proxy)
-        result = checker.check_single(card)
-        
-        # Send result to user
-        self._send_card_result(message, result, to_user=True)
-        
-        # Post to groups if approved
-        if result.is_live():
-            self._post_to_groups(message, result)
-    
-    def _process_file(self, message, file_path: str):
-        """Process a file of cards"""
-        user_id = str(message.from_user.id)
-        
-        # Load cards
-        try:
-            valid_cards, invalid_cards = load_cards_from_file(file_path, limit=200)
-        except Exception as e:
-            self.bot.reply_to(message, f"❌ Error loading file: {e}")
-            return
-        
-        if not valid_cards:
-            self.bot.reply_to(message, "❌ No valid cards found in file")
-            return
-        
-        if invalid_cards:
-            self.bot.send_message(
-                message.chat.id,
-                f"⚠️ Skipped {len(invalid_cards)} invalid cards"
+        async def cmd_start(message):
+            """Welcome message"""
+            user = self.db.get_or_create_user(
+                message.from_user.id,
+                message.from_user.username
             )
-        
-        # Get gateway
-        gateway_id = self.user_gateways.get(user_id)
-        gateway = self.gateway_manager.get_gateway(gateway_id)
-        
-        if not gateway:
-            gateway = self.gateway_manager.get_default_gateway()
-        
-        # Send status message
-        status_msg = self.bot.reply_to(message, f"""
-⏳ <b>Starting Check...</b>
+            
+            welcome = f"""
+🎴 <b>Welcome to MadyStripe Bot v{self.VERSION}</b> 🎴
 
-<b>File:</b> {os.path.basename(file_path)}
-<b>Cards:</b> {len(valid_cards)}
-<b>Gateway:</b> {gateway.name}
+<b>Your Profile:</b>
+• ID: <code>{message.from_user.id}</code>
+• Username: @{message.from_user.username or 'N/A'}
+• Status: {'👑 Premium' if self.db.is_premium(message.from_user.id) else '🆓 Free'}
 
-<i>Processing...</i>
-""", parse_mode='HTML')
+<b>Quick Commands:</b>
+/help - Show all commands
+/check - Check a card
+/gates - List available gateways
+/mystatus - Your account status
+
+<b>Bot Credit:</b> {self.config['bot_credit']}
+"""
+            await self.bot.reply_to(message, welcome, parse_mode='HTML')
         
-        # Get user's proxy
-        proxy = self._get_user_proxy(user_id)
+        @self.bot.message_handler(commands=['help', 'cmds'])
+        async def cmd_help(message):
+            """Show help message"""
+            is_admin = self._is_admin(message.from_user.id)
+            is_owner = self._is_owner(message.from_user.id)
+            
+            help_text = """
+📚 <b>MadyStripe Bot Commands</b>
+
+<b>🔍 Checking Commands:</b>
+/check <code>cc|mm|yy|cvv</code> - Check single card
+/mass - Check multiple cards (reply to file)
+/gates - List available gateways
+/gate <code>id</code> - Set default gateway
+
+<b>👤 Account Commands:</b>
+/mystatus - Your account status
+/history - Check history
+/redeem <code>code</code> - Redeem premium code
+
+<b>📊 Info Commands:</b>
+/bin <code>123456</code> - BIN lookup
+/ping - Check bot status
+/stats - Bot statistics
+"""
+            
+            if is_admin:
+                help_text += """
+<b>🛡️ Admin Commands:</b>
+/ban <code>user_id</code> <code>duration</code> - Ban user
+/unban <code>user_id</code> - Unban user
+/userinfo <code>user_id</code> - User information
+/broadcast <code>message</code> - Broadcast to all users
+"""
+            
+            if is_owner:
+                help_text += """
+<b>👑 Owner Commands:</b>
+/gencode <code>days</code> <code>uses</code> - Generate premium code
+/setadmin <code>user_id</code> - Set user as admin
+/removeadmin <code>user_id</code> - Remove admin
+/maintenance <code>on/off</code> - Toggle maintenance
+/botstats - Detailed bot statistics
+"""
+            
+            help_text += f"\n<b>Bot:</b> {self.config['bot_credit']}"
+            
+            await self.bot.reply_to(message, help_text, parse_mode='HTML')
         
-        # Create checker
-        checker = CardChecker(gateway_id=gateway_id, rate_limit=2.5, proxy=proxy)
-        checker.stats.total = len(valid_cards)
-        self.active_checkers[user_id] = checker
+        @self.bot.message_handler(commands=['mystatus', 'me', 'profile'])
+        async def cmd_mystatus(message):
+            """Show user status"""
+            user = self.db.get_or_create_user(
+                message.from_user.id,
+                message.from_user.username
+            )
+            
+            stats = self.db.get_user_stats(message.from_user.id)
+            usage = self.rate_limiter.get_usage(message.from_user.id, user.get('role', 'free'))
+            
+            # Premium status
+            premium_status = "🆓 Free"
+            premium_until = ""
+            if user.get('role') == 'owner':
+                premium_status = "👑 Owner"
+            elif user.get('role') == 'admin':
+                premium_status = "🛡️ Admin"
+            elif self.db.is_premium(message.from_user.id):
+                premium_status = "⭐ Premium"
+                if user.get('premium_until'):
+                    premium_until = f"\n• Expires: {user['premium_until'][:10]}"
+            
+            status_text = f"""
+👤 <b>Your Profile</b>
+
+<b>Account:</b>
+• ID: <code>{message.from_user.id}</code>
+• Username: @{message.from_user.username or 'N/A'}
+• Status: {premium_status}{premium_until}
+• Member Since: {user.get('created_at', 'N/A')[:10]}
+
+<b>📊 Statistics:</b>
+• Total Checks: {stats.get('total_checks', 0):,}
+• Approved: {stats.get('approved_checks', 0):,}
+• Declined: {stats.get('declined_checks', 0):,}
+• Success Rate: {stats.get('success_rate', 0):.1f}%
+
+<b>⏱️ Rate Limits:</b>
+• Hourly: {usage['hourly_used']}/{usage['hourly_limit']}
+• Daily: {usage['daily_used']}/{usage['daily_limit']}
+"""
+            await self.bot.reply_to(message, status_text, parse_mode='HTML')
         
-        # Progress callback
-        def on_result(result):
-            # Post approved cards to groups
-            if result.is_live():
-                self._post_to_groups(message, result)
-        
-        checker.add_callback(on_result)
-        
-        # Check cards in thread
-        def check_thread():
+        @self.bot.message_handler(commands=['check', 'chk', 'cc'])
+        async def cmd_check(message):
+            """Check a single card"""
+            # Check maintenance mode
+            if self.maintenance_mode and not self._is_admin(message.from_user.id):
+                await self.bot.reply_to(message, "🔧 Bot is under maintenance. Please try again later.")
+                return
+            
+            # Check if banned
+            if self.db.is_banned(message.from_user.id):
+                await self.bot.reply_to(message, "🚫 You are banned from using this bot.")
+                return
+            
+            # Get user tier
+            user = self.db.get_or_create_user(message.from_user.id, message.from_user.username)
+            tier = user.get('role', 'free')
+            
+            # Check rate limit
+            allowed, limit_msg = self.rate_limiter.check_limit(message.from_user.id, tier)
+            if not allowed:
+                await self.bot.reply_to(message, limit_msg)
+                return
+            
+            # Parse card from message
+            text = message.text.split(maxsplit=1)
+            if len(text) < 2:
+                await self.bot.reply_to(message, "❌ Usage: /check cc|mm|yy|cvv")
+                return
+            
+            card_str = text[1].strip()
+            
+            # Validate card format
+            card_pattern = r'^\d{13,19}\|\d{1,2}\|\d{2,4}\|\d{3,4}$'
+            if not re.match(card_pattern, card_str):
+                await self.bot.reply_to(message, "❌ Invalid card format. Use: cc|mm|yy|cvv")
+                return
+            
+            # Send processing message
+            processing_msg = await self.bot.reply_to(message, "⏳ Checking card...")
+            
             try:
-                for i, card in enumerate(valid_cards, 1):
-                    if checker.stop_flag:
-                        break
-                    
-                    result = checker.check_single(card)
-                    
-                    # Update progress every 10 cards
-                    if i % 10 == 0 or i == len(valid_cards):
-                        try:
-                            stats = checker.stats
-                            self.bot.edit_message_text(f"""
-⏳ <b>Progress: {i}/{len(valid_cards)}</b>
-
-✅ Approved: {stats.approved}
-🔐 CVV: {stats.cvv_mismatch}
-💰 Insufficient: {stats.insufficient_funds}
-❌ Declined: {stats.declined}
-⚠️ Errors: {stats.errors}
-
-⚡ Speed: {stats.get_speed():.2f} c/s
-""", message.chat.id, status_msg.message_id, parse_mode='HTML')
-                        except:
-                            pass
-                    
-                    time.sleep(2.5)
+                # Record rate limit
+                self.rate_limiter.start_request(message.from_user.id)
                 
-                # Final summary
-                stats = checker.stats
-                self.bot.edit_message_text(f"""
-🎉 <b>Complete!</b>
-
-<b>Total:</b> {len(valid_cards)} cards
-<b>Gateway:</b> {gateway.name}
-
-✅ Approved: {stats.approved}
-🔐 CVV Mismatch: {stats.cvv_mismatch}
-💰 Insufficient: {stats.insufficient_funds}
-❌ Declined: {stats.declined}
-⚠️ Errors: {stats.errors}
-
-<b>Success Rate:</b> {stats.get_success_rate():.1f}%
-<b>Live Rate:</b> {stats.get_live_rate():.1f}%
-<b>Speed:</b> {stats.get_speed():.2f} c/s
-""", message.chat.id, status_msg.message_id, parse_mode='HTML')
+                # Check card using gateway
+                if self.gateway_manager:
+                    status, result_msg, card_type = self.gateway_manager.check(card_str)
+                else:
+                    status, result_msg, card_type = "error", "Gateway not available", "Unknown"
                 
-            except Exception as e:
-                self.bot.send_message(message.chat.id, f"❌ Error: {str(e)}")
-            finally:
-                if user_id in self.active_checkers:
-                    del self.active_checkers[user_id]
-        
-        thread = threading.Thread(target=check_thread, daemon=True)
-        thread.start()
-    
-    def _send_card_result(self, message, result, to_user: bool = True):
-        """Send card result to user"""
-        type_emoji = "🔓" if result.card_type == "2D" else "🔐" if result.card_type == "3D" else "🛡️"
-        
-        if result.is_approved():
-            text = f"""
-✅ <b>APPROVED!</b>
+                self.rate_limiter.record_request(message.from_user.id)
+                
+                # Log check
+                parts = card_str.split('|')
+                self.db.log_check(
+                    message.from_user.id,
+                    parts[0][:6],  # BIN
+                    parts[0][-4:],  # Last 4
+                    "default",
+                    status,
+                    card_type,
+                    result_msg
+                )
+                
+                # Format response
+                if status == "approved":
+                    response = f"""
+✅ <b>APPROVED</b>
 
-<b>Card:</b> <code>{result.card}</code>
-<b>Gateway:</b> {result.gateway}
-<b>Response:</b> {result.message}
-<b>Card Type:</b> {type_emoji} <b>{result.card_type}</b>
-"""
-        elif result.status == 'error':
-            text = f"""
-⚠️ <b>ERROR</b>
+<b>Card:</b> <code>{card_str}</code>
+<b>Status:</b> {result_msg}
+<b>Type:</b> {card_type}
 
-<b>Card:</b> <code>{result.card}</code>
-<b>Gateway:</b> {result.gateway}
-<b>Error:</b> {result.message}
+<b>Bot:</b> {self.config['bot_credit']}
 """
-        else:
-            text = f"""
+                elif status == "declined":
+                    response = f"""
 ❌ <b>DECLINED</b>
 
-<b>Card:</b> <code>{result.card}</code>
-<b>Gateway:</b> {result.gateway}
-<b>Reason:</b> {result.message}
+<b>Card:</b> <code>{card_str}</code>
+<b>Response:</b> {result_msg}
+
+<b>Bot:</b> {self.config['bot_credit']}
 """
-        
-        if to_user:
-            self.bot.send_message(message.chat.id, text, parse_mode='HTML')
-    
-    def _handle_pipeline_check(self, message):
-        """Handle Pipeline/Stripe gateway check"""
-        from core.pipeline_gateway import PipelineGateway
-        
-        parts = message.text.split(maxsplit=1)
-        
-        if len(parts) < 2:
-            self.bot.reply_to(
-                message,
-                "❌ Usage: /str CARD|MM|YY|CVV\n\n"
-                "Example: /str 4532123456789012|12|25|123\n\n"
-                "This will check with $1 Stripe (Pipeline) gate"
-            )
-            return
-        
-        card = parts[1].strip()
-        
-        # Validate card
-        is_valid, error = validate_card_format(card)
-        if not is_valid:
-            self.bot.reply_to(message, f"❌ {error}\n\nUse format: NUMBER|MM|YY|CVC")
-            return
-        
-        gateway = PipelineGateway()
-        
-        self.bot.reply_to(message, f"⏳ Checking with {gateway.name}...")
-        
-        # Check card
-        status, msg, card_type = gateway.check(card)
-        
-        # Create result object
-        class Result:
-            def __init__(self, card, status, message, card_type, gateway_name):
-                self.card = card
-                self.status = status
-                self.message = message
-                self.card_type = card_type
-                self.gateway = gateway_name
-            
-            def is_live(self):
-                # STRICT: Only approved status is live
-                return self.status == 'approved'
-            
-            def is_approved(self):
-                return self.status == 'approved'
-        
-        result = Result(card, status, msg, card_type, gateway.name)
-        
-        # Send result to user
-        self._send_card_result(message, result, to_user=True)
-        
-        # Post to groups if live
-        if result.is_live():
-            self._post_to_groups(message, result)
-    
-    def _handle_shopify_check(self, message, gate_type: str):
-        """Handle Shopify price gate commands using SimpleShopifyGateway"""
-        parts = message.text.split(maxsplit=1)
-        
-        if len(parts) < 2:
-            gate_names = {
-                'penny': 'Shopify (Any Price)',
-                'low': 'Shopify (Any Price)',
-                'medium': 'Shopify (Any Price)',
-                'high': 'Shopify (Any Price)'
-            }
-            self.bot.reply_to(
-                message,
-                f"❌ Usage: /{gate_type} CARD|MM|YY|CVV\n\n"
-                f"Example: /{gate_type} 4532123456789012|12|25|123\n\n"
-                f"This will check with {gate_names[gate_type]} gate\n"
-                f"(Automatically finds cheapest product from 11,419 stores)"
-            )
-            return
-        
-        card = parts[1].strip()
-        
-        # Validate card
-        is_valid, error = validate_card_format(card)
-        if not is_valid:
-            self.bot.reply_to(message, f"❌ {error}\n\nUse format: NUMBER|MM|YY|CVC")
-            return
-        
-        # Use SimpleShopifyGateway for all Shopify commands
-        # It automatically finds stores and products
-        gateway = SimpleShopifyGateway()
-        
-        self.bot.reply_to(message, f"⏳ Checking with {gateway.name}...\n(Trying up to 5 stores)")
-        
-        # Check card with max 5 store attempts
-        status, msg, card_type = gateway.check(card, max_attempts=5)
-        
-        # Create result object
-        class Result:
-            def __init__(self, card, status, message, card_type, gateway_name):
-                self.card = card
-                self.status = status
-                self.message = message
-                self.card_type = card_type
-                self.gateway = gateway_name
-            
-            def is_live(self):
-                # STRICT: Only approved status is live
-                return self.status == 'approved'
-            
-            def is_approved(self):
-                return self.status == 'approved'
-        
-        result = Result(card, status, msg, card_type, gateway.name)
-        
-        # Send result to user
-        self._send_card_result(message, result, to_user=True)
-        
-        # Post to groups if live
-        if result.is_live():
-            self._post_to_groups(message, result)
-    
-    def _handle_setproxy(self, message):
-        """Handle /setproxy command"""
-        from core.proxy_parser import ProxyParser
-        
-        user_id = str(message.from_user.id)
-        parts = message.text.split(maxsplit=1)
-        
-        if len(parts) < 2:
-            current_proxy = self.user_proxies.get(user_id) or self.global_proxy
-            
-            if current_proxy:
-                text = f"""
-🔒 <b>Current Proxy:</b>
+                else:
+                    response = f"""
+⚠️ <b>ERROR</b>
 
-<code>{current_proxy}</code>
+<b>Card:</b> <code>{card_str}</code>
+<b>Error:</b> {result_msg}
 
-<b>Usage:</b>
-/setproxy <i>proxy</i> - Set new proxy
-/setproxy clear - Remove proxy
-/checkproxy - Test proxy connection
-
-<b>Supported Formats:</b>
-<code>http://user:pass@host:port</code>
-<code>user:pass@host:port</code>
-<code>host:port:user:pass</code>
-<code>host:port</code>
+<b>Bot:</b> {self.config['bot_credit']}
 """
+                
+                await self.bot.edit_message_text(
+                    response,
+                    message.chat.id,
+                    processing_msg.message_id,
+                    parse_mode='HTML'
+                )
+                
+            except Exception as e:
+                logger.error(f"Check error: {e}")
+                await self.bot.edit_message_text(
+                    f"❌ Error: {str(e)[:100]}",
+                    message.chat.id,
+                    processing_msg.message_id
+                )
+            finally:
+                self.rate_limiter.end_request(message.from_user.id)
+        
+        @self.bot.message_handler(commands=['gates', 'gateways'])
+        async def cmd_gates(message):
+            """List available gateways"""
+            if not self.gateway_manager:
+                await self.bot.reply_to(message, "❌ Gateway manager not available")
+                return
+            
+            gateways = self.gateway_manager.list_gateways()
+            
+            gates_text = "🚪 <b>Available Gateways</b>\n\n"
+            for gw in gateways:
+                gates_text += f"[{gw['id']}] {gw['name']} - {gw.get('charge', 'N/A')}\n"
+            
+            gates_text += f"\n<i>Use /gate <id> to set default gateway</i>"
+            
+            await self.bot.reply_to(message, gates_text, parse_mode='HTML')
+        
+        @self.bot.message_handler(commands=['redeem'])
+        async def cmd_redeem(message):
+            """Redeem a premium code"""
+            text = message.text.split(maxsplit=1)
+            if len(text) < 2:
+                await self.bot.reply_to(message, "❌ Usage: /redeem <code>")
+                return
+            
+            code = text[1].strip().upper()
+            success, msg, days = self.db.redeem_code(code, message.from_user.id)
+            
+            if success:
+                await self.bot.reply_to(message, f"✅ {msg}\n\nEnjoy your premium access! 🎉")
             else:
-                text = """
-🔒 <b>No Proxy Set</b>
-
-<b>Usage:</b>
-/setproxy <i>proxy</i>
-
-<b>Supported Formats:</b>
-1. <code>http://user:pass@host:port</code>
-2. <code>user:pass@host:port</code>
-3. <code>host:port:user:pass</code>
-4. <code>host:port</code>
-
-<b>Examples:</b>
-<code>/setproxy http://user:pass@proxy.com:8080</code>
-<code>/setproxy user:pass@proxy.com:8080</code>
-<code>/setproxy proxy.com:8080:user:pass</code>
-
-<b>To remove:</b>
-<code>/setproxy clear</code>
-"""
+                await self.bot.reply_to(message, f"❌ {msg}")
+        
+        @self.bot.message_handler(commands=['history'])
+        async def cmd_history(message):
+            """Show check history"""
+            history = self.db.get_user_history(message.from_user.id, limit=10)
             
-            self.bot.send_message(message.chat.id, text, parse_mode='HTML')
-            return
+            if not history:
+                await self.bot.reply_to(message, "📜 No check history found.")
+                return
+            
+            history_text = "📜 <b>Recent Check History</b>\n\n"
+            for i, check in enumerate(history, 1):
+                status_emoji = "✅" if check['result'] == 'approved' else "❌"
+                history_text += f"{i}. {status_emoji} {check['card_bin']}****{check['card_last4']} - {check['checked_at'][:16]}\n"
+            
+            await self.bot.reply_to(message, history_text, parse_mode='HTML')
         
-        proxy_input = parts[1].strip()
+        @self.bot.message_handler(commands=['stats'])
+        async def cmd_stats(message):
+            """Show bot statistics"""
+            stats = self.db.get_total_stats()
+            
+            stats_text = f"""
+📊 <b>Bot Statistics</b>
+
+<b>Users:</b>
+• Total: {stats['total_users']:,}
+• Premium: {stats['premium_users']:,}
+
+<b>Checks:</b>
+• Total: {stats['total_checks']:,}
+• Approved: {stats['approved_checks']:,}
+• Today: {stats['today_checks']:,}
+• Success Rate: {stats['success_rate']:.1f}%
+
+<b>Bot:</b> {self.config['bot_credit']}
+"""
+            await self.bot.reply_to(message, stats_text, parse_mode='HTML')
         
-        # Clear proxy
-        if proxy_input.lower() == 'clear':
-            if user_id in self.user_proxies:
-                del self.user_proxies[user_id]
-            self.bot.reply_to(message, "✅ Proxy cleared!")
-            return
-        
-        # Parse proxy using ProxyParser
-        parsed_proxy = ProxyParser.parse(proxy_input)
-        
-        if not parsed_proxy:
-            self.bot.reply_to(
-                message,
-                "❌ Invalid proxy format!\n\n"
-                "<b>Supported formats:</b>\n"
-                "• <code>http://user:pass@host:port</code>\n"
-                "• <code>user:pass@host:port</code>\n"
-                "• <code>host:port:user:pass</code>\n"
-                "• <code>host:port</code>\n\n"
-                "<b>Examples:</b>\n"
-                "• <code>proxy.com:8080:myuser:mypass</code>\n"
-                "• <code>user:pass@proxy.com:8080</code>",
-                parse_mode='HTML'
+        @self.bot.message_handler(commands=['ping'])
+        async def cmd_ping(message):
+            """Check bot status"""
+            start = datetime.now()
+            msg = await self.bot.reply_to(message, "🏓 Pong!")
+            latency = (datetime.now() - start).total_seconds() * 1000
+            await self.bot.edit_message_text(
+                f"🏓 Pong! Latency: {latency:.0f}ms",
+                message.chat.id,
+                msg.message_id
             )
-            return
         
-        # Set proxy (store in standard format)
-        self.user_proxies[user_id] = parsed_proxy
+        # ==================== Admin Commands ====================
         
-        self.bot.reply_to(
-            message,
-            f"✅ Proxy set successfully!\n\n"
-            f"<b>Original:</b> <code>{proxy_input}</code>\n"
-            f"<b>Parsed:</b> <code>{parsed_proxy}</code>\n\n"
-            f"Use /checkproxy to test connection",
-            parse_mode='HTML'
-        )
+        @self.bot.message_handler(commands=['ban'])
+        async def cmd_ban(message):
+            """Ban a user (admin only)"""
+            if not self._is_admin(message.from_user.id):
+                await self.bot.reply_to(message, "🚫 Admin only command")
+                return
+            
+            parts = message.text.split()
+            if len(parts) < 2:
+                await self.bot.reply_to(message, "❌ Usage: /ban <user_id> [duration]\nDurations: 1hour, 1day, 2days, 1week, 1month, 1year, permanent")
+                return
+            
+            try:
+                target_id = int(parts[1])
+                duration = parts[2] if len(parts) > 2 else 'permanent'
+                reason = ' '.join(parts[3:]) if len(parts) > 3 else None
+                
+                if self._is_owner(target_id):
+                    await self.bot.reply_to(message, "🚫 Cannot ban owner")
+                    return
+                
+                self.db.ban_user(target_id, duration, reason)
+                self.db.log_admin_action(message.from_user.id, 'ban', target_id, f"Duration: {duration}")
+                
+                await self.bot.reply_to(message, f"✅ User {target_id} banned for {duration}")
+            except ValueError:
+                await self.bot.reply_to(message, "❌ Invalid user ID")
+        
+        @self.bot.message_handler(commands=['unban'])
+        async def cmd_unban(message):
+            """Unban a user (admin only)"""
+            if not self._is_admin(message.from_user.id):
+                await self.bot.reply_to(message, "🚫 Admin only command")
+                return
+            
+            parts = message.text.split()
+            if len(parts) < 2:
+                await self.bot.reply_to(message, "❌ Usage: /unban <user_id>")
+                return
+            
+            try:
+                target_id = int(parts[1])
+                self.db.unban_user(target_id)
+                self.db.log_admin_action(message.from_user.id, 'unban', target_id)
+                
+                await self.bot.reply_to(message, f"✅ User {target_id} unbanned")
+            except ValueError:
+                await self.bot.reply_to(message, "❌ Invalid user ID")
+        
+        @self.bot.message_handler(commands=['userinfo'])
+        async def cmd_userinfo(message):
+            """Get user info (admin only)"""
+            if not self._is_admin(message.from_user.id):
+                await self.bot.reply_to(message, "🚫 Admin only command")
+                return
+            
+            parts = message.text.split()
+            if len(parts) < 2:
+                await self.bot.reply_to(message, "❌ Usage: /userinfo <user_id>")
+                return
+            
+            try:
+                target_id = int(parts[1])
+                user = self.db.get_user(target_id)
+                
+                if not user:
+                    await self.bot.reply_to(message, "❌ User not found")
+                    return
+                
+                stats = self.db.get_user_stats(target_id)
+                
+                info = f"""
+👤 <b>User Info</b>
+
+<b>ID:</b> <code>{user['telegram_id']}</code>
+<b>Username:</b> @{user.get('username', 'N/A')}
+<b>Role:</b> {user.get('role', 'free')}
+<b>Premium Until:</b> {user.get('premium_until', 'N/A')}
+<b>Banned:</b> {'Yes' if user.get('is_banned') else 'No'}
+<b>Created:</b> {user.get('created_at', 'N/A')[:10]}
+
+<b>Stats:</b>
+• Total Checks: {stats.get('total_checks', 0)}
+• Approved: {stats.get('approved_checks', 0)}
+• Success Rate: {stats.get('success_rate', 0):.1f}%
+"""
+                await self.bot.reply_to(message, info, parse_mode='HTML')
+            except ValueError:
+                await self.bot.reply_to(message, "❌ Invalid user ID")
+        
+        # ==================== Owner Commands ====================
+        
+        @self.bot.message_handler(commands=['gencode'])
+        async def cmd_gencode(message):
+            """Generate premium code (owner only)"""
+            if not self._is_owner(message.from_user.id):
+                await self.bot.reply_to(message, "🚫 Owner only command")
+                return
+            
+            parts = message.text.split()
+            if len(parts) < 2:
+                await self.bot.reply_to(message, "❌ Usage: /gencode <days> [max_uses]")
+                return
+            
+            try:
+                days = int(parts[1])
+                max_uses = int(parts[2]) if len(parts) > 2 else 1
+                
+                code = self.db.generate_code(days, max_uses, message.from_user.id)
+                
+                await self.bot.reply_to(message, f"""
+🎁 <b>Premium Code Generated</b>
+
+<b>Code:</b> <code>{code}</code>
+<b>Days:</b> {days}
+<b>Max Uses:</b> {max_uses}
+
+<i>Share this code with users to redeem premium access.</i>
+""", parse_mode='HTML')
+                
+                self.db.log_admin_action(message.from_user.id, 'gencode', details=f"Days: {days}, Uses: {max_uses}")
+            except ValueError:
+                await self.bot.reply_to(message, "❌ Invalid parameters")
+        
+        @self.bot.message_handler(commands=['setadmin'])
+        async def cmd_setadmin(message):
+            """Set user as admin (owner only)"""
+            if not self._is_owner(message.from_user.id):
+                await self.bot.reply_to(message, "🚫 Owner only command")
+                return
+            
+            parts = message.text.split()
+            if len(parts) < 2:
+                await self.bot.reply_to(message, "❌ Usage: /setadmin <user_id>")
+                return
+            
+            try:
+                target_id = int(parts[1])
+                self.db.update_user(target_id, role='admin')
+                self.db.log_admin_action(message.from_user.id, 'setadmin', target_id)
+                
+                await self.bot.reply_to(message, f"✅ User {target_id} is now an admin")
+            except ValueError:
+                await self.bot.reply_to(message, "❌ Invalid user ID")
+        
+        @self.bot.message_handler(commands=['removeadmin'])
+        async def cmd_removeadmin(message):
+            """Remove admin (owner only)"""
+            if not self._is_owner(message.from_user.id):
+                await self.bot.reply_to(message, "🚫 Owner only command")
+                return
+            
+            parts = message.text.split()
+            if len(parts) < 2:
+                await self.bot.reply_to(message, "❌ Usage: /removeadmin <user_id>")
+                return
+            
+            try:
+                target_id = int(parts[1])
+                self.db.update_user(target_id, role='free')
+                self.db.log_admin_action(message.from_user.id, 'removeadmin', target_id)
+                
+                await self.bot.reply_to(message, f"✅ Admin removed from user {target_id}")
+            except ValueError:
+                await self.bot.reply_to(message, "❌ Invalid user ID")
+        
+        @self.bot.message_handler(commands=['maintenance'])
+        async def cmd_maintenance(message):
+            """Toggle maintenance mode (owner only)"""
+            if not self._is_owner(message.from_user.id):
+                await self.bot.reply_to(message, "🚫 Owner only command")
+                return
+            
+            parts = message.text.split()
+            if len(parts) < 2 or parts[1].lower() not in ['on', 'off']:
+                await self.bot.reply_to(message, "❌ Usage: /maintenance <on/off>")
+                return
+            
+            self.maintenance_mode = parts[1].lower() == 'on'
+            self.db.set_setting('maintenance_mode', self.maintenance_mode)
+            
+            status = "enabled 🔧" if self.maintenance_mode else "disabled ✅"
+            await self.bot.reply_to(message, f"Maintenance mode {status}")
+        
+        @self.bot.message_handler(commands=['botstats'])
+        async def cmd_botstats(message):
+            """Detailed bot statistics (owner only)"""
+            if not self._is_owner(message.from_user.id):
+                await self.bot.reply_to(message, "🚫 Owner only command")
+                return
+            
+            stats = self.db.get_total_stats()
+            daily_stats = self.db.get_daily_stats(7)
+            gateway_stats = self.db.get_gateway_stats()
+            
+            stats_text = f"""
+📊 <b>Detailed Bot Statistics</b>
+
+<b>Users:</b>
+• Total: {stats['total_users']:,}
+• Premium: {stats['premium_users']:,}
+
+<b>Checks:</b>
+• Total: {stats['total_checks']:,}
+• Approved: {stats['approved_checks']:,}
+• Today: {stats['today_checks']:,}
+• Success Rate: {stats['success_rate']:.1f}%
+
+<b>Last 7 Days:</b>
+"""
+            for day in daily_stats[:7]:
+                stats_text += f"• {day['date']}: {day['total']} checks ({day['approved']} approved)\n"
+            
+            if gateway_stats:
+                stats_text += "\n<b>Gateway Performance:</b>\n"
+                for gw in gateway_stats[:5]:
+                    stats_text += f"• {gw['gateway']}: {gw['total']} ({gw['success_rate']}%)\n"
+            
+            await self.bot.reply_to(message, stats_text, parse_mode='HTML')
+        
+        @self.bot.message_handler(commands=['broadcast'])
+        async def cmd_broadcast(message):
+            """Broadcast message to all users (admin only)"""
+            if not self._is_admin(message.from_user.id):
+                await self.bot.reply_to(message, "🚫 Admin only command")
+                return
+            
+            text = message.text.split(maxsplit=1)
+            if len(text) < 2:
+                await self.bot.reply_to(message, "❌ Usage: /broadcast <message>")
+                return
+            
+            broadcast_msg = text[1]
+            users = self.db.get_all_users(limit=10000)
+            
+            sent = 0
+            failed = 0
+            
+            status_msg = await self.bot.reply_to(message, f"📢 Broadcasting to {len(users)} users...")
+            
+            for user in users:
+                try:
+                    await self.bot.send_message(
+                        user['telegram_id'],
+                        f"📢 <b>Broadcast Message</b>\n\n{broadcast_msg}",
+                        parse_mode='HTML'
+                    )
+                    sent += 1
+                except:
+                    failed += 1
+                
+                # Update progress every 50 users
+                if (sent + failed) % 50 == 0:
+                    await self.bot.edit_message_text(
+                        f"📢 Broadcasting... {sent + failed}/{len(users)}",
+                        message.chat.id,
+                        status_msg.message_id
+                    )
+            
+            await self.bot.edit_message_text(
+                f"✅ Broadcast complete!\n• Sent: {sent}\n• Failed: {failed}",
+                message.chat.id,
+                status_msg.message_id
+            )
+            
+            self.db.log_admin_action(message.from_user.id, 'broadcast', details=f"Sent: {sent}, Failed: {failed}")
     
-    def _handle_checkproxy(self, message):
-        """Handle /checkproxy command"""
-        user_id = str(message.from_user.id)
-        
-        # Get user's proxy or global proxy
-        proxy = self.user_proxies.get(user_id) or self.global_proxy
-        
-        if not proxy:
-            self.bot.reply_to(
-                message,
-                "❌ No proxy configured!\n\n"
-                "Use /setproxy to set a proxy"
-            )
-            return
-        
-        # Send testing message
-        test_msg = self.bot.reply_to(
-            message,
-            f"🔄 Testing proxy...\n\n<code>{proxy}</code>",
-            parse_mode='HTML'
-        )
-        
-        # Test proxy
-        import requests
+    async def run(self):
+        """Start the bot"""
+        logger.info(f"Starting MadyStripe Bot v{self.VERSION}...")
+        logger.info(f"Bot credit: {self.config['bot_credit']}")
         
         try:
-            # Parse proxy
-            proxies = {
-                'http': proxy,
-                'https': proxy
-            }
-            
-            # Test with httpbin
-            response = requests.get(
-                'https://httpbin.org/ip',
-                proxies=proxies,
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                ip = data.get('origin', 'Unknown')
-                
-                self.bot.edit_message_text(
-                    f"✅ <b>Proxy Working!</b>\n\n"
-                    f"<b>Proxy:</b> <code>{proxy}</code>\n"
-                    f"<b>IP:</b> <code>{ip}</code>\n"
-                    f"<b>Status:</b> Connected\n\n"
-                    f"Your requests will use this proxy.",
-                    message.chat.id,
-                    test_msg.message_id,
-                    parse_mode='HTML'
-                )
-            else:
-                self.bot.edit_message_text(
-                    f"⚠️ <b>Proxy Issue</b>\n\n"
-                    f"<b>Proxy:</b> <code>{proxy}</code>\n"
-                    f"<b>Status Code:</b> {response.status_code}\n\n"
-                    f"Proxy may not be working correctly.",
-                    message.chat.id,
-                    test_msg.message_id,
-                    parse_mode='HTML'
-                )
-        
-        except requests.exceptions.ProxyError:
-            self.bot.edit_message_text(
-                f"❌ <b>Proxy Connection Failed</b>\n\n"
-                f"<b>Proxy:</b> <code>{proxy}</code>\n"
-                f"<b>Error:</b> Cannot connect to proxy\n\n"
-                f"Check proxy address and credentials.",
-                message.chat.id,
-                test_msg.message_id,
-                parse_mode='HTML'
-            )
-        
-        except requests.exceptions.Timeout:
-            self.bot.edit_message_text(
-                f"⏱️ <b>Proxy Timeout</b>\n\n"
-                f"<b>Proxy:</b> <code>{proxy}</code>\n"
-                f"<b>Error:</b> Connection timeout\n\n"
-                f"Proxy is too slow or not responding.",
-                message.chat.id,
-                test_msg.message_id,
-                parse_mode='HTML'
-            )
-        
+            await self.bot.polling(non_stop=True, skip_pending=True)
         except Exception as e:
-            self.bot.edit_message_text(
-                f"❌ <b>Proxy Test Failed</b>\n\n"
-                f"<b>Proxy:</b> <code>{proxy}</code>\n"
-                f"<b>Error:</b> {str(e)[:100]}\n\n"
-                f"Check proxy configuration.",
-                message.chat.id,
-                test_msg.message_id,
-                parse_mode='HTML'
-            )
-    
-    def _get_user_proxy(self, user_id: str) -> Optional[str]:
-        """Get proxy for user"""
-        return self.user_proxies.get(user_id) or self.global_proxy
-    
-    def _post_to_groups(self, message, result):
-        """Post approved card to groups"""
-        type_emoji = "🔓" if result.card_type == "2D" else "🔐" if result.card_type == "3D" else "🛡️"
-        
-        username = message.from_user.username or "User"
-        
-        text = f"""
-✅ <b>LIVE CARD</b> ✅
-
-<b>Card:</b> <code>{result.card}</code>
-<b>Gateway:</b> {result.gateway}
-<b>Response:</b> {result.message}
-<b>Card Type:</b> {type_emoji} <b>{result.card_type}</b>
-
-<b>By:</b> @{username}
-<b>Bot:</b> {self.bot_credit}
-"""
-        
-        for group_id in self.group_ids:
-            try:
-                self.bot.send_message(group_id, text, parse_mode='HTML')
-            except Exception as e:
-                print(f"Error posting to group {group_id}: {e}")
-    
-    def run(self):
-        """Start the bot"""
-        print("="*60)
-        print("🤖 MadyStripe Telegram Bot Starting...")
-        print(f"Groups: {', '.join(self.group_ids)}")
-        print(f"Gateways: {len(self.gateway_manager.list_gateways())}")
-        print("="*60)
-        
-        while True:
-            try:
-                self.bot.infinity_polling(timeout=20, long_polling_timeout=10)
-            except Exception as e:
-                print(f"Error: {e}")
-                time.sleep(5)
+            logger.error(f"Bot error: {e}")
+            raise
 
 
-def run_telegram_bot(bot_token: str, group_ids: list, bot_credit: str = "@MissNullMe"):
-    """
-    Run the Telegram bot
-    
-    Args:
-        bot_token: Telegram bot token
-        group_ids: List of group IDs
-        bot_credit: Bot credit text
-    """
-    bot = TelegramBotInterface(bot_token, group_ids, bot_credit)
-    bot.run()
+def main():
+    """Main entry point"""
+    try:
+        bot = MadyStripeBot()
+        asyncio.run(bot.run())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
+        raise
 
 
 if __name__ == '__main__':
-    # Configuration
-    BOT_TOKEN = "8598833492:AAHpOq3lB51htnWV_c2zfKkP8zxCrc9cw4M"
-    GROUP_IDS = ["-1003538559040"]
-    BOT_CREDIT = "@MissNullMe"
-    
-    run_telegram_bot(BOT_TOKEN, GROUP_IDS, BOT_CREDIT)
+    main()
