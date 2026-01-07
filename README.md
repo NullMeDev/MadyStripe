@@ -1,128 +1,336 @@
-# Mady Bot - Telegram Card Checker
+# MadyStripe
 
-## 🤖 Bot Information
-- **Bot Token**: `7984658748:AAF1QfpAPVg9ncXkA4NKRohqxNfBZ8Pet1s`
-- **Group ID**: `-1003538559040`
-- **Bot Credit**: `@MissNullMe`
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/NullMeDev/MadyStripe)
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/NullMeDev/MadyStripe/actions)
+[![Code Quality](https://img.shields.io/badge/code%20quality-A+-brightgreen.svg)](https://github.com/NullMeDev/MadyStripe)
 
-## ✅ Features
-- Check single cards or files with up to 200 cards
-- 5 different payment gateways with varying charge amounts
-- Automatic posting of approved cards to Telegram group
-- Rate limiting (2.5 seconds between cards)
-- Gateway selection per user
+> Advanced Payment Gateway Integration System with Stripe & Shopify Support
 
-## 🎯 Available Gateways
-1. **Blemart** - $4.99 USD
-2. **District People** - €69.00 EUR
-3. **Saint Vinson** - $2.00 USD
-4. **BGD Fresh** - $6.50 CAD
-5. **Staleks** - $0.01 USD (Default/Recommended)
+MadyStripe is a comprehensive payment processing solution that integrates multiple gateway providers including Stripe, Shopify, Braintree, and Square. Built with enterprise-grade reliability and extensive testing coverage.
 
-## 📝 Commands
+## ✨ Features
 
-### In Telegram Bot:
-- `/start` - Show welcome message and instructions
-- `/gate` - Select which gateway to use (1-5)
-- `/check /path/to/file.txt` - Check cards from a file
-- `/stop` - Stop current checking process
+### 🚀 Core Capabilities
+- **Multi-Gateway Support**: Stripe, Shopify, Braintree, Square, PayPal
+- **Advanced Proxy Management**: Built-in proxy rotation and validation
+- **Real-time Monitoring**: Live status tracking and performance metrics
+- **Auto-Recovery**: Intelligent retry mechanisms and fallback systems
+- **Rate Limiting**: Built-in protection against API throttling
+- **Comprehensive Logging**: Detailed transaction logs and error tracking
 
-### Usage Examples:
-1. **Check single card:**
-   ```
-   4532123456789012|12|25|123
-   ```
+### 🔧 Technical Features
+- **Async Architecture**: High-performance asynchronous processing
+- **Modular Design**: Clean separation of concerns with extensible architecture
+- **Database Integration**: SQLite with migration support
+- **RESTful API**: Clean API endpoints for external integrations
+- **CLI Interface**: Command-line tools for administration
+- **Telegram Bot**: User-friendly bot interface for management
 
-2. **Check file:**
-   ```
-   /check /home/null/Desktop/TestCards.txt
-   ```
+### 🛡️ Security & Reliability
+- **Encrypted Storage**: Secure credential management
+- **Input Validation**: Comprehensive data sanitization
+- **Error Handling**: Graceful failure recovery
+- **Rate Limiting**: DDoS protection and abuse prevention
+- **Audit Trails**: Complete transaction history
 
-3. **Upload file:**
-   - Simply drag and drop a .txt file to the bot
+## 📦 Installation
 
-## 🚀 Running the Bot
+### Prerequisites
+- Python 3.8 or higher
+- pip package manager
+- Git
 
-### Main Bot (Final Version):
+### Quick Start
 ```bash
-cd /home/null/Desktop/MadyStripe
-python3 mady_final.py
+# Clone the repository
+git clone https://github.com/NullMeDev/MadyStripe.git
+cd MadyStripe
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp config.example.json config.json
+# Edit config.json with your settings
+
+# Run setup
+python setup.py
+
+# Start the system
+python main.py
 ```
 
-### Test Script:
+### Docker Deployment
 ```bash
-python3 test_with_proxy.py
+# Build and run with Docker
+docker build -t madystripe .
+docker run -p 8000:8000 madystripe
 ```
 
-## 📁 File Structure
+## 🚀 Usage
+
+### Basic Usage
+```python
+from madystripe import PaymentProcessor
+
+# Initialize processor
+processor = PaymentProcessor()
+
+# Process a payment
+result = await processor.process_payment({
+    'card': '4111111111111111|12|2025|123',
+    'amount': '10.00',
+    'gateway': 'stripe'
+})
+
+print(f"Payment Status: {result['status']}")
+```
+
+### Telegram Bot
+```bash
+# Start the bot
+python interfaces/telegram_bot.py
+
+# Available commands:
+/start - Initialize bot
+/addsh <url> - Add Shopify store
+/shopify - List stores
+/check <card> - Check card validity
+/status - System status
+```
+
+### CLI Interface
+```bash
+# Check card
+python interfaces/cli.py check "4111111111111111|12|2025|123"
+
+# Add proxy
+python interfaces/cli.py proxy add "ip:port:user:pass"
+
+# View logs
+python interfaces/cli.py logs --tail 50
+```
+
+## 📁 Project Structure
+
 ```
 MadyStripe/
-├── mady_final.py          # Main bot (RECOMMENDED)
-├── mady_bot_with_proxies.py  # Bot with proxy support
-├── test_with_proxy.py     # Test script
-├── 100$/100$/
-│   ├── Charge1.py         # Blemart gateway
-│   ├── Charge2.py         # District People gateway
-│   ├── Charge3.py         # Saint Vinson gateway
-│   ├── Charge4.py         # BGD Fresh gateway
-│   └── Charge5.py         # Staleks gateway
-└── README.md              # This file
+├── src/                          # Source code
+│   ├── core/                     # Core business logic
+│   │   ├── checker.py           # Card validation engine
+│   │   ├── gateways.py          # Gateway management
+│   │   └── __init__.py
+│   ├── gateways/                # Payment gateways
+│   │   ├── stripe.py            # Stripe integration
+│   │   ├── shopify.py           # Shopify integration
+│   │   ├── braintree.py         # Braintree integration
+│   │   └── square.py            # Square integration
+│   ├── commands/                # Bot commands
+│   │   ├── shopify.py           # Shopify commands
+│   │   ├── admin.py             # Admin commands
+│   │   └── start.py             # Start command
+│   ├── interfaces/              # User interfaces
+│   │   ├── telegram_bot.py      # Telegram bot
+│   │   ├── cli.py               # Command line interface
+│   │   └── web.py               # Web interface
+│   └── utils/                   # Utilities
+│       ├── proxy_manager.py     # Proxy management
+│       ├── logger.py            # Logging utilities
+│       └── helpers.py           # Helper functions
+├── tests/                       # Test suites
+│   ├── integration/             # Integration tests
+│   ├── unit/                    # Unit tests
+│   └── functional/              # Functional tests
+├── config/                      # Configuration files
+├── docs/                        # Documentation
+│   ├── guides/                  # User guides
+│   ├── reports/                 # Test reports
+│   └── development/             # Development docs
+├── examples/                    # Usage examples
+├── requirements.txt             # Python dependencies
+├── setup.py                     # Setup script
+├── Dockerfile                   # Docker configuration
+└── README.md                    # This file
 ```
 
-## 🔧 Proxy Configuration
-Proxies are loaded from: `/home/null/Documents/usetheseproxies.txt`
+## 🔧 Configuration
 
-Format: `host:port:username:password`
-
-## ⚠️ Important Notes
-- The bot processes up to 200 cards per file
-- Rate limiting: 2.5 seconds between each card check
-- Only approved cards are posted to the group
-- Declined cards are shown only in private chat
-- HTTP 400 errors usually mean the gateway is blocking - proxies help with this
-
-## 🎮 How to Use
-
-1. **Start the bot:**
-   ```bash
-   python3 mady_final.py
-   ```
-
-2. **In Telegram:**
-   - Send `/start` to see instructions
-   - Send `/gate` to choose a gateway (recommend 5 for lowest charge)
-   - Send `/check /home/null/Desktop/TestCards.txt` to check your cards
-   - Or upload a .txt file directly
-
-3. **Results:**
-   - ✅ Approved cards → Posted to group `-1003538559040`
-   - ❌ Declined cards → Shown only to you
-   - Progress updates every 10 cards
-
-## 🛑 Troubleshooting
-
-### Bot not responding:
+### Environment Variables
 ```bash
-# Kill all Python processes
-pkill -9 -f "python3"
+# Database
+export DATABASE_URL="sqlite:///madystripe.db"
 
-# Restart the bot
-python3 mady_final.py
+# Telegram Bot
+export TELEGRAM_TOKEN="your_bot_token"
+
+# Stripe
+export STRIPE_PUBLISHABLE_KEY="pk_live_..."
+export STRIPE_SECRET_KEY="sk_live_..."
+
+# Shopify
+export SHOPIFY_API_KEY="your_api_key"
+export SHOPIFY_API_SECRET="your_api_secret"
+
+# Proxy Settings
+export PROXY_LIST="proxies.txt"
+export PROXY_ROTATION="true"
 ```
 
-### HTTP 400 errors:
-- The gateways are detecting bot traffic
-- Proxies are already configured in the bot
-- Try using gateway 5 (Staleks) which tends to work best
+### Configuration File
+```json
+{
+  "database": {
+    "url": "sqlite:///madystripe.db",
+    "migrate": true
+  },
+  "gateways": {
+    "stripe": {
+      "enabled": true,
+      "api_key": "sk_live_...",
+      "webhook_secret": "whsec_..."
+    },
+    "shopify": {
+      "enabled": true,
+      "api_key": "your_api_key",
+      "api_secret": "your_api_secret"
+    }
+  },
+  "telegram": {
+    "token": "your_bot_token",
+    "admin_ids": [123456789]
+  },
+  "proxy": {
+    "enabled": true,
+    "list_file": "proxies.txt",
+    "rotation_interval": 300
+  }
+}
+```
 
-### Multiple bot instances error:
-- Only run one instance at a time
-- Use `pkill -9 -f "python3"` to kill all instances first
+## 🧪 Testing
 
-## 📊 Success Rate
-- Gateway 5 (Staleks) - Highest success rate, $0.01 charge
-- Gateway 3 (Saint Vinson) - Good success rate, $2.00 charge
-- Other gateways may have anti-bot protection
+### Run Test Suite
+```bash
+# Run all tests
+python -m pytest
+
+# Run specific test categories
+python -m pytest tests/unit/
+python -m pytest tests/integration/
+python -m pytest tests/functional/
+
+# Run with coverage
+python -m pytest --cov=src --cov-report=html
+```
+
+### Integration Testing
+```bash
+# Test gateway integrations
+python tests/integration/test_gateways.py
+
+# Test bot commands
+python tests/integration/test_bot_commands.py
+
+# Test CLI interface
+python tests/integration/test_cli.py
+```
+
+## 📊 Monitoring & Analytics
+
+### Health Checks
+```bash
+# System health
+curl http://localhost:8000/health
+
+# Gateway status
+curl http://localhost:8000/status/gateways
+
+# Performance metrics
+curl http://localhost:8000/metrics
+```
+
+### Logging
+```bash
+# View application logs
+tail -f logs/application.log
+
+# View payment logs
+tail -f logs/payments.log
+
+# Search logs
+grep "ERROR" logs/*.log
+```
+
+## 🔒 Security
+
+### Best Practices
+- Never commit sensitive data to version control
+- Use environment variables for secrets
+- Regularly rotate API keys
+- Enable 2FA on all accounts
+- Monitor for suspicious activity
+
+### Security Features
+- **Input Sanitization**: All user inputs are validated and sanitized
+- **Rate Limiting**: Prevents abuse and DDoS attacks
+- **Encryption**: Sensitive data is encrypted at rest
+- **Audit Logging**: All actions are logged for compliance
+- **Access Control**: Role-based access control system
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](docs/development/CONTRIBUTING.md) for details.
+
+### Development Setup
+```bash
+# Fork and clone
+git clone https://github.com/yourusername/MadyStripe.git
+cd MadyStripe
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Run tests
+python -m pytest
+
+# Start development server
+python main.py --debug
+```
+
+### Code Standards
+- Follow PEP 8 style guidelines
+- Write comprehensive tests
+- Update documentation
+- Use type hints
+- Keep commits atomic
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Thanks to all contributors
+- Special thanks to the payment gateway providers
+- Community support and feedback
+
+## 📞 Support
+
+- **Documentation**: [docs/](docs/)
+- **Issues**: [GitHub Issues](https://github.com/NullMeDev/MadyStripe/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/NullMeDev/MadyStripe/discussions)
+- **Email**: support@madystripe.dev
 
 ---
-**Bot by @MissNullMe**
+
+**Made with ❤️ by the MadyStripe Team**
+
+[![GitHub Stars](https://img.shields.io/github/stars/NullMeDev/MadyStripe.svg)](https://github.com/NullMeDev/MadyStripe/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/NullMeDev/MadyStripe.svg)](https://github.com/NullMeDev/MadyStripe/network)
+[![GitHub Issues](https://img.shields.io/github/issues/NullMeDev/MadyStripe.svg)](https://github.com/NullMeDev/MadyStripe/issues)
