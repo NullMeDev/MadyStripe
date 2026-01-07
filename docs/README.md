@@ -1,128 +1,78 @@
-# Mady Bot - Telegram Card Checker
+# MadyStripe Documentation
 
-## 🤖 Bot Information
-- **Bot Token**: `7984658748:AAF1QfpAPVg9ncXkA4NKRohqxNfBZ8Pet1s`
-- **Group ID**: `-1003538559040`
-- **Bot Credit**: `@MissNullMe`
+Welcome to the MadyStripe documentation. This folder contains all guides, reports, and implementation details.
 
-## ✅ Features
-- Check single cards or files with up to 200 cards
-- 5 different payment gateways with varying charge amounts
-- Automatic posting of approved cards to Telegram group
-- Rate limiting (2.5 seconds between cards)
-- Gateway selection per user
+## 📚 Quick Navigation
 
-## 🎯 Available Gateways
-1. **Blemart** - $4.99 USD
-2. **District People** - €69.00 EUR
-3. **Saint Vinson** - $2.00 USD
-4. **BGD Fresh** - $6.50 CAD
-5. **Staleks** - $0.01 USD (Default/Recommended)
+### Getting Started
+- [Quick Start Guide](QUICK_START.md)
+- [Usage Guide](USAGE_GUIDE.md)
+- [How to Use](HOW_TO_USE.md)
 
-## 📝 Commands
+### Bot Guides
+- [Bot Usage Guide](BOT_USAGE_GUIDE.md)
+- [Mady Bot Setup Guide](MADY_BOT_SETUP_GUIDE.md)
+- [Enhanced Bot Guide](ENHANCED_BOT_GUIDE.md)
+- [Which Bot to Use](WHICH_BOT_TO_USE.md)
+- [Start Bot Guide](START_BOT_GUIDE.md)
 
-### In Telegram Bot:
-- `/start` - Show welcome message and instructions
-- `/gate` - Select which gateway to use (1-5)
-- `/check /path/to/file.txt` - Check cards from a file
-- `/stop` - Stop current checking process
+### Gateway Documentation
+- [Gateway Improvements](GATEWAY_IMPROVEMENTS.md)
+- [Extended Gateways Guide](EXTENDED_GATEWAYS_GUIDE.md)
+- [Pipeline Gateway Upgrade](PIPELINE_GATEWAY_UPGRADE.md)
+- [Error Detection Explained](ERROR_DETECTION_EXPLAINED.md)
 
-### Usage Examples:
-1. **Check single card:**
-   ```
-   4532123456789012|12|25|123
-   ```
+### Shopify Integration
+- [Shopify Integration Guide](SHOPIFY_INTEGRATION_GUIDE.md)
+- [Shopify Usage Guide](SHOPIFY_USAGE_GUIDE.md)
+- [Shopify API Gateway Complete](SHOPIFY_API_GATEWAY_COMPLETE.md)
+- [Store Database Guide](STORE_DATABASE_GUIDE.md)
+- [Shopify Gates Usage Guide](SHOPIFY_GATES_USAGE_GUIDE_FINAL.md)
 
-2. **Check file:**
-   ```
-   /check /home/null/Desktop/TestCards.txt
-   ```
+### AutoshBot Integration
+- [AutoshBot Complete Summary](AUTOSHBOT_COMPLETE_SUMMARY.md)
+- [AutoshBot Deployment Guide](AUTOSHBOT_DEPLOYMENT_GUIDE.md)
+- [AutoshBot Quick Reference](AUTOSHBOT_QUICK_REFERENCE.md)
+- [AutoshBot Venv Setup Guide](AUTOSHBOT_VENV_SETUP_GUIDE.md)
 
-3. **Upload file:**
-   - Simply drag and drop a .txt file to the bot
+### Implementation Details
+- [Final Complete Guide](FINAL_COMPLETE_GUIDE.md)
+- [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
+- [MadyStripe Unified Guide](MADYSTRIPE_UNIFIED_GUIDE.md)
+- [Migration Summary](MIGRATION_SUMMARY.md)
 
-## 🚀 Running the Bot
+### Test Reports
+- [Final Test Report](FINAL_TEST_REPORT.md)
+- [Comprehensive Test Report](COMPREHENSIVE_TEST_REPORT.md)
+- [Test Results Summary](TEST_RESULTS_SUMMARY.md)
+- [VPS Testing Report](VPS_TESTING_REPORT.md)
 
-### Main Bot (Final Version):
-```bash
-cd /home/null/Desktop/MadyStripe
-python3 mady_final.py
+### Proxy & Selenium
+- [Selenium Implementation Complete](SELENIUM_IMPLEMENTATION_COMPLETE.md)
+- [Selenium Usage Guide](SELENIUM_USAGE_GUIDE.md)
+- [Webshare Proxy Integration](WEBSHARE_PROXY_INTEGRATION.md)
+- [Shopify V3 Proxy Guide](SHOPIFY_V3_PROXY_GUIDE.md)
+
+## 📁 Folder Structure
+
+```
+docs/
+├── guides/          # User guides and tutorials
+├── reports/         # Test reports and summaries
+├── implementation/  # Implementation details
+├── archive/         # Archived/deprecated docs
+└── development/     # Development notes
 ```
 
-### Test Script:
-```bash
-python3 test_with_proxy.py
-```
+## 🔗 Related Files
 
-## 📁 File Structure
-```
-MadyStripe/
-├── mady_final.py          # Main bot (RECOMMENDED)
-├── mady_bot_with_proxies.py  # Bot with proxy support
-├── test_with_proxy.py     # Test script
-├── 100$/100$/
-│   ├── Charge1.py         # Blemart gateway
-│   ├── Charge2.py         # District People gateway
-│   ├── Charge3.py         # Saint Vinson gateway
-│   ├── Charge4.py         # BGD Fresh gateway
-│   └── Charge5.py         # Staleks gateway
-└── README.md              # This file
-```
+- [Main README](../README.md)
+- [CHANGELOG](../CHANGELOG.md)
+- [CONTRIBUTING](../CONTRIBUTING.md)
+- [SECURITY](../SECURITY.md)
 
-## 🔧 Proxy Configuration
-Proxies are loaded from: `/home/null/Documents/usetheseproxies.txt`
+## 📝 Notes
 
-Format: `host:port:username:password`
-
-## ⚠️ Important Notes
-- The bot processes up to 200 cards per file
-- Rate limiting: 2.5 seconds between each card check
-- Only approved cards are posted to the group
-- Declined cards are shown only in private chat
-- HTTP 400 errors usually mean the gateway is blocking - proxies help with this
-
-## 🎮 How to Use
-
-1. **Start the bot:**
-   ```bash
-   python3 mady_final.py
-   ```
-
-2. **In Telegram:**
-   - Send `/start` to see instructions
-   - Send `/gate` to choose a gateway (recommend 5 for lowest charge)
-   - Send `/check /home/null/Desktop/TestCards.txt` to check your cards
-   - Or upload a .txt file directly
-
-3. **Results:**
-   - ✅ Approved cards → Posted to group `-1003538559040`
-   - ❌ Declined cards → Shown only to you
-   - Progress updates every 10 cards
-
-## 🛑 Troubleshooting
-
-### Bot not responding:
-```bash
-# Kill all Python processes
-pkill -9 -f "python3"
-
-# Restart the bot
-python3 mady_final.py
-```
-
-### HTTP 400 errors:
-- The gateways are detecting bot traffic
-- Proxies are already configured in the bot
-- Try using gateway 5 (Staleks) which tends to work best
-
-### Multiple bot instances error:
-- Only run one instance at a time
-- Use `pkill -9 -f "python3"` to kill all instances first
-
-## 📊 Success Rate
-- Gateway 5 (Staleks) - Highest success rate, $0.01 charge
-- Gateway 3 (Saint Vinson) - Good success rate, $2.00 charge
-- Other gateways may have anti-bot protection
-
----
-**Bot by @MissNullMe**
+- All sensitive information has been removed from documentation
+- Configuration examples use placeholder values
+- See `.env.example` for configuration template

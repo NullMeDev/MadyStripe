@@ -1,336 +1,299 @@
-# MadyStripe
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/python-3.8+-green.svg" alt="Python">
+  <img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="License">
+  <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build">
+  <img src="https://img.shields.io/badge/security-audited-purple.svg" alt="Security">
+</p>
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/NullMeDev/MadyStripe)
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/NullMeDev/MadyStripe/actions)
-[![Code Quality](https://img.shields.io/badge/code%20quality-A+-brightgreen.svg)](https://github.com/NullMeDev/MadyStripe)
+<h1 align="center">🔐 MadyStripe</h1>
 
-> Advanced Payment Gateway Integration System with Stripe & Shopify Support
+<p align="center">
+  <strong>Advanced Payment Gateway Integration Framework</strong>
+</p>
 
-MadyStripe is a comprehensive payment processing solution that integrates multiple gateway providers including Stripe, Shopify, Braintree, and Square. Built with enterprise-grade reliability and extensive testing coverage.
+<p align="center">
+  A powerful, modular payment processing toolkit with multi-gateway support including Stripe, Shopify, Braintree, and more.
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#documentation">Documentation</a> •
+  <a href="#contributing">Contributing</a>
+</p>
+
+---
+
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [Configuration](#-configuration)
+- [Gateways](#-gateways)
+- [Telegram Bot](#-telegram-bot)
+- [API Reference](#-api-reference)
+- [Documentation](#-documentation)
+- [Security](#-security)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Contact](#-contact)
+
+---
 
 ## ✨ Features
 
-### 🚀 Core Capabilities
-- **Multi-Gateway Support**: Stripe, Shopify, Braintree, Square, PayPal
-- **Advanced Proxy Management**: Built-in proxy rotation and validation
-- **Real-time Monitoring**: Live status tracking and performance metrics
-- **Auto-Recovery**: Intelligent retry mechanisms and fallback systems
-- **Rate Limiting**: Built-in protection against API throttling
-- **Comprehensive Logging**: Detailed transaction logs and error tracking
+### Core Features
+- **Multi-Gateway Support** - Stripe, Shopify, Braintree, Square, and more
+- **Telegram Bot Integration** - Full-featured bot for remote management
+- **Async Processing** - High-performance asynchronous card processing
+- **Smart Store Cycling** - Automatic rotation through 200+ pre-validated stores
+- **Proxy Support** - Built-in proxy rotation and management
+- **Error Detection** - Advanced error parsing and categorization
 
-### 🔧 Technical Features
-- **Async Architecture**: High-performance asynchronous processing
-- **Modular Design**: Clean separation of concerns with extensible architecture
-- **Database Integration**: SQLite with migration support
-- **RESTful API**: Clean API endpoints for external integrations
-- **CLI Interface**: Command-line tools for administration
-- **Telegram Bot**: User-friendly bot interface for management
+### Gateway Support
+| Gateway | Status | Description |
+|---------|--------|-------------|
+| Stripe | ✅ Active | Direct Stripe API integration |
+| Shopify | ✅ Active | Products.json API flow |
+| Braintree | ✅ Active | PayPal/Braintree processing |
+| Square | ✅ Active | Square payment processing |
+| Pipeline | ✅ Active | Multi-stage verification |
 
-### 🛡️ Security & Reliability
-- **Encrypted Storage**: Secure credential management
-- **Input Validation**: Comprehensive data sanitization
-- **Error Handling**: Graceful failure recovery
-- **Rate Limiting**: DDoS protection and abuse prevention
-- **Audit Trails**: Complete transaction history
+### Security Features
+- 🔒 Secure credential management
+- 🛡️ Rate limiting and anti-detection
+- 🔐 Encrypted configuration storage
+- 📝 Comprehensive audit logging
+
+---
 
 ## 📦 Installation
 
 ### Prerequisites
 - Python 3.8 or higher
 - pip package manager
-- Git
+- Virtual environment (recommended)
 
-### Quick Start
+### Quick Install
+
 ```bash
 # Clone the repository
 git clone https://github.com/NullMeDev/MadyStripe.git
 cd MadyStripe
 
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
-cp config.example.json config.json
-# Edit config.json with your settings
+# Copy environment template
+cp .env.example .env
 
-# Run setup
-python setup.py
-
-# Start the system
-python main.py
+# Configure your credentials
+nano .env  # or use your preferred editor
 ```
 
-### Docker Deployment
+### Dependencies
+
 ```bash
-# Build and run with Docker
-docker build -t madystripe .
-docker run -p 8000:8000 madystripe
+pip install aiohttp asyncio requests pyTelegramBotAPI selenium
 ```
-
-## 🚀 Usage
-
-### Basic Usage
-```python
-from madystripe import PaymentProcessor
-
-# Initialize processor
-processor = PaymentProcessor()
-
-# Process a payment
-result = await processor.process_payment({
-    'card': '4111111111111111|12|2025|123',
-    'amount': '10.00',
-    'gateway': 'stripe'
-})
-
-print(f"Payment Status: {result['status']}")
-```
-
-### Telegram Bot
-```bash
-# Start the bot
-python interfaces/telegram_bot.py
-
-# Available commands:
-/start - Initialize bot
-/addsh <url> - Add Shopify store
-/shopify - List stores
-/check <card> - Check card validity
-/status - System status
-```
-
-### CLI Interface
-```bash
-# Check card
-python interfaces/cli.py check "4111111111111111|12|2025|123"
-
-# Add proxy
-python interfaces/cli.py proxy add "ip:port:user:pass"
-
-# View logs
-python interfaces/cli.py logs --tail 50
-```
-
-## 📁 Project Structure
-
-```
-MadyStripe/
-├── src/                          # Source code
-│   ├── core/                     # Core business logic
-│   │   ├── checker.py           # Card validation engine
-│   │   ├── gateways.py          # Gateway management
-│   │   └── __init__.py
-│   ├── gateways/                # Payment gateways
-│   │   ├── stripe.py            # Stripe integration
-│   │   ├── shopify.py           # Shopify integration
-│   │   ├── braintree.py         # Braintree integration
-│   │   └── square.py            # Square integration
-│   ├── commands/                # Bot commands
-│   │   ├── shopify.py           # Shopify commands
-│   │   ├── admin.py             # Admin commands
-│   │   └── start.py             # Start command
-│   ├── interfaces/              # User interfaces
-│   │   ├── telegram_bot.py      # Telegram bot
-│   │   ├── cli.py               # Command line interface
-│   │   └── web.py               # Web interface
-│   └── utils/                   # Utilities
-│       ├── proxy_manager.py     # Proxy management
-│       ├── logger.py            # Logging utilities
-│       └── helpers.py           # Helper functions
-├── tests/                       # Test suites
-│   ├── integration/             # Integration tests
-│   ├── unit/                    # Unit tests
-│   └── functional/              # Functional tests
-├── config/                      # Configuration files
-├── docs/                        # Documentation
-│   ├── guides/                  # User guides
-│   ├── reports/                 # Test reports
-│   └── development/             # Development docs
-├── examples/                    # Usage examples
-├── requirements.txt             # Python dependencies
-├── setup.py                     # Setup script
-├── Dockerfile                   # Docker configuration
-└── README.md                    # This file
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-```bash
-# Database
-export DATABASE_URL="sqlite:///madystripe.db"
-
-# Telegram Bot
-export TELEGRAM_TOKEN="your_bot_token"
-
-# Stripe
-export STRIPE_PUBLISHABLE_KEY="pk_live_..."
-export STRIPE_SECRET_KEY="sk_live_..."
-
-# Shopify
-export SHOPIFY_API_KEY="your_api_key"
-export SHOPIFY_API_SECRET="your_api_secret"
-
-# Proxy Settings
-export PROXY_LIST="proxies.txt"
-export PROXY_ROTATION="true"
-```
-
-### Configuration File
-```json
-{
-  "database": {
-    "url": "sqlite:///madystripe.db",
-    "migrate": true
-  },
-  "gateways": {
-    "stripe": {
-      "enabled": true,
-      "api_key": "sk_live_...",
-      "webhook_secret": "whsec_..."
-    },
-    "shopify": {
-      "enabled": true,
-      "api_key": "your_api_key",
-      "api_secret": "your_api_secret"
-    }
-  },
-  "telegram": {
-    "token": "your_bot_token",
-    "admin_ids": [123456789]
-  },
-  "proxy": {
-    "enabled": true,
-    "list_file": "proxies.txt",
-    "rotation_interval": 300
-  }
-}
-```
-
-## 🧪 Testing
-
-### Run Test Suite
-```bash
-# Run all tests
-python -m pytest
-
-# Run specific test categories
-python -m pytest tests/unit/
-python -m pytest tests/integration/
-python -m pytest tests/functional/
-
-# Run with coverage
-python -m pytest --cov=src --cov-report=html
-```
-
-### Integration Testing
-```bash
-# Test gateway integrations
-python tests/integration/test_gateways.py
-
-# Test bot commands
-python tests/integration/test_bot_commands.py
-
-# Test CLI interface
-python tests/integration/test_cli.py
-```
-
-## 📊 Monitoring & Analytics
-
-### Health Checks
-```bash
-# System health
-curl http://localhost:8000/health
-
-# Gateway status
-curl http://localhost:8000/status/gateways
-
-# Performance metrics
-curl http://localhost:8000/metrics
-```
-
-### Logging
-```bash
-# View application logs
-tail -f logs/application.log
-
-# View payment logs
-tail -f logs/payments.log
-
-# Search logs
-grep "ERROR" logs/*.log
-```
-
-## 🔒 Security
-
-### Best Practices
-- Never commit sensitive data to version control
-- Use environment variables for secrets
-- Regularly rotate API keys
-- Enable 2FA on all accounts
-- Monitor for suspicious activity
-
-### Security Features
-- **Input Sanitization**: All user inputs are validated and sanitized
-- **Rate Limiting**: Prevents abuse and DDoS attacks
-- **Encryption**: Sensitive data is encrypted at rest
-- **Audit Logging**: All actions are logged for compliance
-- **Access Control**: Role-based access control system
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](docs/development/CONTRIBUTING.md) for details.
-
-### Development Setup
-```bash
-# Fork and clone
-git clone https://github.com/yourusername/MadyStripe.git
-cd MadyStripe
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install development dependencies
-pip install -r requirements-dev.txt
-
-# Run tests
-python -m pytest
-
-# Start development server
-python main.py --debug
-```
-
-### Code Standards
-- Follow PEP 8 style guidelines
-- Write comprehensive tests
-- Update documentation
-- Use type hints
-- Keep commits atomic
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Thanks to all contributors
-- Special thanks to the payment gateway providers
-- Community support and feedback
-
-## 📞 Support
-
-- **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/NullMeDev/MadyStripe/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/NullMeDev/MadyStripe/discussions)
-- **Email**: support@madystripe.dev
 
 ---
 
-**Made with ❤️ by the MadyStripe Team**
+## 🚀 Quick Start
 
-[![GitHub Stars](https://img.shields.io/github/stars/NullMeDev/MadyStripe.svg)](https://github.com/NullMeDev/MadyStripe/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/NullMeDev/MadyStripe.svg)](https://github.com/NullMeDev/MadyStripe/network)
-[![GitHub Issues](https://img.shields.io/github/issues/NullMeDev/MadyStripe.svg)](https://github.com/NullMeDev/MadyStripe/issues)
+### 1. Configure Credentials
+
+Copy `.env.example` to `.env` and fill in your credentials:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your actual values:
+```env
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_GROUP_ID=your_group_id
+```
+
+### 2. Run the Telegram Bot
+
+```bash
+python3 interfaces/telegram_bot_enhanced.py
+```
+
+### 3. Use the CLI
+
+```bash
+python3 madystripe.py --help
+```
+
+### 4. Check a Card
+
+```python
+from src.core.gateways import get_gateway_manager
+
+gm = get_gateway_manager()
+status, message, card_type = gm.check_card("4242424242424242|12|25|123", gateway_id=1)
+print(f"Status: {status}, Message: {message}")
+```
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `TELEGRAM_BOT_TOKEN` | Telegram bot API token | Yes |
+| `TELEGRAM_GROUP_ID` | Target group/channel ID | Yes |
+| `BLACKBOX_API_KEY` | Blackbox API key | Optional |
+| `PROXY_HOST` | Proxy server host | Optional |
+| `PROXY_PORT` | Proxy server port | Optional |
+
+### Configuration Files
+
+```
+MadyStripe/
+├── .env                    # Environment variables (not tracked)
+├── .env.example            # Environment template
+├── .secrets.local.json     # Local secrets (not tracked)
+└── config/
+    └── config.example.json # Configuration template
+```
+
+---
+
+## 🔌 Gateways
+
+### Available Gateways
+
+```python
+from src.core.gateways import get_gateway_manager
+
+gm = get_gateway_manager()
+gateways = gm.list_gateways()
+
+for gw in gateways:
+    print(f"[{gw['id']}] {gw['name']} - {gw['description']}")
+```
+
+### Gateway List
+
+| ID | Name | Type | Status |
+|----|------|------|--------|
+| 1 | Stripe Direct | Payment | Active |
+| 2 | Stripe Checkout | Payment | Active |
+| 3 | Braintree | Payment | Active |
+| 4 | Square | Payment | Active |
+| 5 | Pipeline | Multi-stage | Active |
+| 6 | CC Foundation | Validation | Active |
+| 7 | Shopify Simple | E-commerce | Active |
+| 8 | Shopify Dynamic | E-commerce | Active |
+| 9 | Shopify API | E-commerce | Active |
+
+---
+
+## 🤖 Telegram Bot
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `/start` | Initialize the bot |
+| `/help` | Show help message |
+| `/chk <card>` | Check a single card |
+| `/mass` | Mass check cards (reply to file) |
+| `/gates` | List available gateways |
+| `/setgate <id>` | Set active gateway |
+| `/stats` | Show statistics |
+
+### Usage Example
+
+```
+/chk 4242424242424242|12|25|123
+```
+
+---
+
+## 📚 Documentation
+
+Detailed documentation is available in the `docs/` folder:
+
+- [Quick Start Guide](docs/QUICK_START.md)
+- [Gateway Configuration](docs/GATEWAY_CONFIGURATION.md)
+- [Shopify Integration](docs/SHOPIFY_INTEGRATION_GUIDE.md)
+- [API Reference](docs/API_REFERENCE.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+
+---
+
+## 🔒 Security
+
+### Reporting Vulnerabilities
+
+If you discover a security vulnerability, please send an email to security@example.com. All security vulnerabilities will be promptly addressed.
+
+### Security Best Practices
+
+1. **Never commit credentials** - Use `.env` files and `.gitignore`
+2. **Rotate API keys regularly** - Update credentials periodically
+3. **Use proxies** - Protect your IP address
+4. **Enable logging** - Monitor for suspicious activity
+
+See [SECURITY.md](SECURITY.md) for more details.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Development Setup
+
+```bash
+# Fork and clone the repository
+git clone https://github.com/YOUR_USERNAME/MadyStripe.git
+
+# Create a feature branch
+git checkout -b feature/your-feature-name
+
+# Make your changes and commit
+git commit -m "Add your feature"
+
+# Push and create a pull request
+git push origin feature/your-feature-name
+```
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 📞 Contact
+
+- **Author**: NullMe
+- **Telegram**: [@MissNullMe](https://t.me/MissNullMe)
+- **GitHub**: [NullMeDev](https://github.com/NullMeDev)
+
+---
+
+## ⭐ Star History
+
+If you find this project useful, please consider giving it a star! ⭐
+
+---
+
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/NullMeDev">NullMe</a>
+</p>

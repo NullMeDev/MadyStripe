@@ -1,0 +1,28 @@
+# MadyStripe Requirements
+# Core dependencies
+
+# HTTP/Async
+aiohttp>=3.8.0
+requests>=2.28.0
+
+# Telegram Bot
+pyTelegramBotAPI>=4.14.0
+
+# Web Scraping/Automation
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+
+# Data Processing
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Utilities
+python-dotenv>=1.0.0
+colorama>=0.4.6
+
+# Development (optional)
+# pytest>=7.4.0
+# pytest-cov>=4.1.0
+# black>=23.0.0
+# flake8>=6.1.0
+# isort>=5.12.0
