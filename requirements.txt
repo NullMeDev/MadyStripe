@@ -20,6 +20,13 @@ lxml>=4.9.0
 python-dotenv>=1.0.0
 colorama>=0.4.6
 
+# Security/2FA
+pyotp>=2.9.0
+qrcode>=7.4.0
+
+# YAML Processing
+PyYAML>=6.0.0
+
 # Development (optional)
 # pytest>=7.4.0
 # pytest-cov>=4.1.0
