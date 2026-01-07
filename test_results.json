@@ -1,0 +1,93 @@
+{
+  "gateways": {
+    "blemart": [
+      {
+        "card": "5566****",
+        "status": "\u2753 UNKNOWN",
+        "time": 5.8595476150512695,
+        "response": "Non-JSON Checkout Response (Status 200): <!DOCTYPE"
+      },
+      {
+        "card": "4304****",
+        "status": "\u2753 UNKNOWN",
+        "time": 4.828083515167236,
+        "response": "Non-JSON Checkout Response (Status 200): <!DOCTYPE"
+      }
+    ],
+    "district": [
+      {
+        "card": "5566****",
+        "status": "\u274c ERROR",
+        "time": 1.2992138862609863,
+        "response": "Error: Step 0 Failed - Visit product page: 404 Cli"
+      },
+      {
+        "card": "4304****",
+        "status": "\u274c ERROR",
+        "time": 1.3015143871307373,
+        "response": "Error: Step 0 Failed - Visit product page: 404 Cli"
+      }
+    ],
+    "saintvinson": [
+      {
+        "card": "5566****",
+        "status": "\u274c ERROR",
+        "time": 2.6119954586029053,
+        "response": "Error: Step 1 Failed - Network Error: Expecting va"
+      },
+      {
+        "card": "4304****",
+        "status": "\u274c ERROR",
+        "time": 2.5695385932922363,
+        "response": "Error: Step 1 Failed - Network Error: Expecting va"
+      }
+    ],
+    "bgd": [
+      {
+        "card": "5566****",
+        "status": "\u274c ERROR",
+        "time": 5.759186744689941,
+        "response": "Declined (Checkout Error: Unable to process)"
+      },
+      {
+        "card": "4304****",
+        "status": "\u274c ERROR",
+        "time": 1.6467370986938477,
+        "response": "Error: Add to Cart failed (after reg): 400 Client "
+      }
+    ],
+    "ccfoundation": [
+      {
+        "card": "5566****",
+        "status": "\u274c ERROR",
+        "time": 16.24431347846985,
+        "response": "Error: Donation HTTPSConnectionPool(host='ccfo"
+      },
+      {
+        "card": "4304****",
+        "status": "\u274c ERROR",
+        "time": 17.123169898986816,
+        "response": "Error: Donation HTTPSConnectionPool(host='ccfo"
+      }
+    ]
+  },
+  "bot_features": {
+    "telebot": "Success",
+    "initialization": "Success - @EmillyLumaBot",
+    "file_reading": "Success - 68709 cards"
+  },
+  "error_handling": {
+    "invalid_1": "Handled",
+    "invalid_2": "Handled",
+    "invalid_3": "Handled",
+    "invalid_4": "Handled",
+    "invalid_5": "Handled"
+  },
+  "performance": {
+    "blemart": "5.34s",
+    "district": "1.30s",
+    "saintvinson": "2.59s",
+    "bgd": "3.70s",
+    "ccfoundation": "16.68s"
+  }
+}

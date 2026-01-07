@@ -1,0 +1,142 @@
+{
+  "passed": 16,
+  "failed": 11,
+  "skipped": 0,
+  "tests": [
+    {
+      "name": "Import autoShopify module",
+      "status": "FAIL",
+      "message": "Token must not contain spaces"
+    },
+    {
+      "name": "Import Utils module",
+      "status": "PASS",
+      "message": "Utils module available"
+    },
+    {
+      "name": "Import database functions",
+      "status": "PASS",
+      "message": "Database functions available"
+    },
+    {
+      "name": "fetchProducts function exists",
+      "status": "FAIL",
+      "message": "name 'autoShopify' is not defined"
+    },
+    {
+      "name": "process_card function exists",
+      "status": "FAIL",
+      "message": "name 'autoShopify' is not defined"
+    },
+    {
+      "name": "verify_shopify_url function exists",
+      "status": "FAIL",
+      "message": "name 'autoShopify' is not defined"
+    },
+    {
+      "name": "fetchProducts signature",
+      "status": "FAIL",
+      "message": "name 'autoShopify' is not defined"
+    },
+    {
+      "name": "process_card signature",
+      "status": "FAIL",
+      "message": "name 'autoShopify' is not defined"
+    },
+    {
+      "name": "Invalid domain handling",
+      "status": "FAIL",
+      "message": "name 'autoShopify' is not defined"
+    },
+    {
+      "name": "Empty domain handling",
+      "status": "FAIL",
+      "message": "name 'autoShopify' is not defined"
+    },
+    {
+      "name": "None domain handling",
+      "status": "FAIL",
+      "message": "name 'autoShopify' is not defined"
+    },
+    {
+      "name": "Database initialization",
+      "status": "PASS",
+      "message": "Database initialized successfully"
+    },
+    {
+      "name": "User creation",
+      "status": "FAIL",
+      "message": "add_user() takes 1 positional argument but 2 were given"
+    },
+    {
+      "name": "User retrieval",
+      "status": "FAIL",
+      "message": "User not found"
+    },
+    {
+      "name": "Random name generation",
+      "status": "PASS",
+      "message": "Generated: John Doe"
+    },
+    {
+      "name": "Email generation",
+      "status": "PASS",
+      "message": "Generated: johndoe172@gmail.com"
+    },
+    {
+      "name": "Address generation",
+      "status": "PASS",
+      "message": "Generated address with all fields"
+    },
+    {
+      "name": "File exists: bot.py",
+      "status": "PASS",
+      "message": "Found at AutoshBotSRC/AutoshBotSRC/bot.py"
+    },
+    {
+      "name": "File exists: database.py",
+      "status": "PASS",
+      "message": "Found at AutoshBotSRC/AutoshBotSRC/database.py"
+    },
+    {
+      "name": "File exists: utils.py",
+      "status": "PASS",
+      "message": "Found at AutoshBotSRC/AutoshBotSRC/utils.py"
+    },
+    {
+      "name": "File exists: autoShopify.py",
+      "status": "PASS",
+      "message": "Found at AutoshBotSRC/AutoshBotSRC/gateways/autoShopify.py"
+    },
+    {
+      "name": "File exists: shopify.py",
+      "status": "PASS",
+      "message": "Found at AutoshBotSRC/AutoshBotSRC/commands/shopify.py"
+    },
+    {
+      "name": "File exists: requirements.txt",
+      "status": "PASS",
+      "message": "Found at AutoshBotSRC/AutoshBotSRC/requirements.txt"
+    },
+    {
+      "name": "Bot token configuration",
+      "status": "PASS",
+      "message": "TOKEN variable found in bot.py"
+    },
+    {
+      "name": "Requirements validation",
+      "status": "PASS",
+      "message": "All required packages present"
+    },
+    {
+      "name": "Syntax validation",
+      "status": "PASS",
+      "message": "No syntax errors in autoShopify.py"
+    },
+    {
+      "name": "Bug fix verification",
+      "status": "PASS",
+      "message": "No premature variant reference found"
+    }
+  ]
+}

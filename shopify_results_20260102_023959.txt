@@ -1,0 +1,39 @@
+MADY Shopify Payments Checker Results
+Store: https://example-store.myshopify.com
+Date: 2026-01-02 02:39:59
+Total: 10 | Approved: 0 | Declined: 0 | Errors: 10
+======================================================================
+
+
+ERRORS:
+----------------------------------------------------------------------
+4037840119255188|06|2029|449
+  → Error: Store not accessible
+
+4037840113768103|10|2035|328
+  → Error: Store not accessible
+
+5239100006294698|10|2028|779
+  → Error: Store not accessible
+
+4037840119255568|07|2031|223
+  → Error: Store not accessible
+
+4037840114311820|12|2034|788
+  → Error: Store not accessible
+
+5239100008837403|09|2029|435
+  → Error: Store not accessible
+
+4037840119255915|07|2026|767
+  → Error: Store not accessible
+
+4037840111505291|05|2032|892
+  → Error: Store not accessible
+
+5239100006470728|09|2034|434
+  → Error: Store not accessible
+
+4037840119255840|03|2029|611
+  → Error: Store not accessible
+

@@ -29,6 +29,13 @@ try:
 except ImportError:
     SHOPIFY_PRICE_GATES_AVAILABLE = False
 
+# Import Shopify API Gateway (Full /products.json flow)
+try:
+    from .shopify_api_gateway import ShopifyAPIGatewayWrapper
+    SHOPIFY_API_GATEWAY_AVAILABLE = True
+except ImportError:
+    SHOPIFY_API_GATEWAY_AVAILABLE = False
+
 
 class Gateway:
     """Base gateway class"""
@@ -413,6 +420,13 @@ class GatewayManager:
             self.gateways['shopify_high'] = shopify_high
             self.gateways['shopify_45'] = shopify_high
             self.gateways['8'] = shopify_high
+        
+        # Gateway 9: Shopify API Gateway (Full /products.json flow with 15K+ stores)
+        if SHOPIFY_API_GATEWAY_AVAILABLE:
+            shopify_api = ShopifyAPIGatewayWrapper()
+            self.gateways['shopify_api'] = shopify_api
+            self.gateways['shopify_full'] = shopify_api
+            self.gateways['9'] = shopify_api
         
         # Try to load legacy gateways
         self._load_legacy_gateways()

@@ -1,0 +1,162 @@
+{
+  "timestamp": "2026-01-03T19:23:04.987377",
+  "summary": {
+    "total_tested": 12,
+    "accessible": 12,
+    "products_found": 10
+  },
+  "results": {
+    "0.01": [
+      {
+        "store": "sifrinerias.myshopify.com",
+        "accessible": true,
+        "products_count": 5,
+        "product_found": true,
+        "product_details": {
+          "found": true,
+          "product_id": 23163,
+          "variant_id": 31135,
+          "price": "0.01",
+          "available": true
+        }
+      },
+      {
+        "store": "ratterriers.myshopify.com",
+        "accessible": true,
+        "products_count": 2,
+        "product_found": true,
+        "product_details": {
+          "found": true,
+          "product_id": 5901,
+          "variant_id": 7031,
+          "price": "0.01",
+          "available": true
+        }
+      },
+      {
+        "store": "furls.myshopify.com",
+        "accessible": true,
+        "products_count": 30,
+        "product_found": false,
+        "product_details": null
+      }
+    ],
+    "5.00": [
+      {
+        "store": "performancetrainingsystems.myshopify.com",
+        "accessible": true,
+        "products_count": 1,
+        "product_found": true,
+        "product_details": {
+          "found": true,
+          "product_id": 58713,
+          "variant_id": 81712,
+          "price": "4.99",
+          "available": true
+        }
+      },
+      {
+        "store": "escnet.myshopify.com",
+        "accessible": true,
+        "products_count": 2,
+        "product_found": true,
+        "product_details": {
+          "found": true,
+          "product_id": 19271,
+          "variant_id": 25194,
+          "price": "5.00",
+          "available": true
+        }
+      },
+      {
+        "store": "liddelton.myshopify.com",
+        "accessible": true,
+        "products_count": 2,
+        "product_found": true,
+        "product_details": {
+          "found": true,
+          "product_id": 2192,
+          "variant_id": 2785,
+          "price": "5.00",
+          "available": true
+        }
+      }
+    ],
+    "20.00": [
+      {
+        "store": "tuscanolive.myshopify.com",
+        "accessible": true,
+        "products_count": 2,
+        "product_found": true,
+        "product_details": {
+          "found": true,
+          "product_id": 19280,
+          "variant_id": 25203,
+          "price": "20.00",
+          "available": true
+        }
+      },
+      {
+        "store": "xtremevids.myshopify.com",
+        "accessible": true,
+        "products_count": 9,
+        "product_found": true,
+        "product_details": {
+          "found": true,
+          "product_id": 21178,
+          "variant_id": 28165,
+          "price": "19.99",
+          "available": true
+        }
+      },
+      {
+        "store": "qontent.myshopify.com",
+        "accessible": true,
+        "products_count": 2,
+        "product_found": true,
+        "product_details": {
+          "found": true,
+          "product_id": 3961,
+          "variant_id": 4886,
+          "price": "20.00",
+          "available": true
+        }
+      }
+    ],
+    "100.00": [
+      {
+        "store": "jmsps.myshopify.com",
+        "accessible": true,
+        "products_count": 1,
+        "product_found": true,
+        "product_details": {
+          "found": true,
+          "product_id": 20263,
+          "variant_id": 26672,
+          "price": "100.00",
+          "available": true
+        }
+      },
+      {
+        "store": "mitienda.myshopify.com",
+        "accessible": true,
+        "products_count": 2,
+        "product_found": true,
+        "product_details": {
+          "found": true,
+          "product_id": 20529,
+          "variant_id": 27218,
+          "price": "100.00",
+          "available": true
+        }
+      },
+      {
+        "store": "electricwheel-store.myshopify.com",
+        "accessible": true,
+        "products_count": 30,
+        "product_found": false,
+        "product_details": null
+      }
+    ]
+  }
+}

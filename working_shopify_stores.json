@@ -1,0 +1,118 @@
+{
+  "penny": [
+    {
+      "store": "turningpointe.myshopify.com",
+      "price": 1.0,
+      "product": "IDEA - shared",
+      "variant_id": "23685"
+    },
+    {
+      "store": "smekenseducation.myshopify.com",
+      "price": 1.0,
+      "product": "Writing Across the Curriculum Strategy Card",
+      "variant_id": "25076"
+    },
+    {
+      "store": "buger.myshopify.com",
+      "price": 1.99,
+      "product": "Hyi",
+      "variant_id": "25038"
+    }
+  ],
+  "low": [
+    {
+      "store": "sasters.myshopify.com",
+      "price": 4.45,
+      "product": "asdasddd",
+      "variant_id": "25071"
+    },
+    {
+      "store": "performancetrainingsystems.myshopify.com",
+      "price": 4.99,
+      "product": "Boston Marathon Course Video",
+      "variant_id": "81712"
+    },
+    {
+      "store": "tabithastreasures.myshopify.com",
+      "price": 6.95,
+      "product": "rocking retro bibs",
+      "variant_id": "107924"
+    },
+    {
+      "store": "fdbf.myshopify.com",
+      "price": 8.0,
+      "product": "Dream-o-rama",
+      "variant_id": "23885"
+    },
+    {
+      "store": "toosmart.myshopify.com",
+      "price": 9.95,
+      "product": "Gluten Free Cook DVD Vol.1",
+      "variant_id": "12724792"
+    },
+    {
+      "store": "runescapemoney.myshopify.com",
+      "price": 9.99,
+      "product": "Copy of Runescape Money 1m",
+      "variant_id": "24325"
+    },
+    {
+      "store": "theaterchurch.myshopify.com",
+      "price": 10.0,
+      "product": "Further CD",
+      "variant_id": "29463"
+    }
+  ],
+  "medium": [
+    {
+      "store": "vehicleyard.myshopify.com",
+      "price": 12.0,
+      "product": "test",
+      "variant_id": "25033"
+    },
+    {
+      "store": "fishnet.myshopify.com",
+      "price": 14.99,
+      "product": "FishNet for PokerStars",
+      "variant_id": "24007"
+    },
+    {
+      "store": "auction-sniper.myshopify.com",
+      "price": 15.0,
+      "product": "test",
+      "variant_id": "24163"
+    },
+    {
+      "store": "jackaroo.myshopify.com",
+      "price": 15.0,
+      "product": "one",
+      "variant_id": "24752"
+    },
+    {
+      "store": "themacnurse.myshopify.com",
+      "price": 17.5,
+      "product": "The Mac Nurse Pro 1 Year Subscription - Special In",
+      "variant_id": "24909"
+    }
+  ],
+  "high": [
+    {
+      "store": "maps.myshopify.com",
+      "price": 45.0,
+      "product": "Alabama DRG's",
+      "variant_id": "25050"
+    },
+    {
+      "store": "zetacom.myshopify.com",
+      "price": 399.0,
+      "product": "Web 3",
+      "variant_id": "60176"
+    },
+    {
+      "store": "hugo.myshopify.com",
+      "price": 1000.0,
+      "product": "Wiki for 10 users",
+      "variant_id": "24738"
+    }
+  ]
+}
